@@ -34,6 +34,14 @@ export function isAccessTokenExpired(): boolean {
   return isTokenExpired(token);
 }
 
+export function hasValidAccessSession(): boolean {
+  const token = readAccessToken();
+  if (!token || isTokenExpired(token)) {
+    return false;
+  }
+  return getTokenEmail(token) !== null && getTokenRole(token) !== null;
+}
+
 export function saveAuthentication(response: AuthenticationResponse): void {
   setTokens(response.accessToken, response.refreshToken);
 }
