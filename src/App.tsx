@@ -4,9 +4,10 @@ import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { BooksPage } from './pages/BooksPage';
 import { AuthorsPage } from './pages/AuthorsPage';
+import { MembersPage } from './pages/MembersPage';
 import { ResourcePlaceholderPage } from './pages/ResourcePlaceholderPage';
 import { AppLayout } from './components/layout/AppLayout';
-import { GuestOnly, RequireAuth } from './routes/guards';
+import { GuestOnly, RequireAdmin, RequireAuth } from './routes/guards';
 
 export default function App() {
   return (
@@ -22,15 +23,9 @@ export default function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/books" element={<BooksPage />} />
           <Route path="/authors" element={<AuthorsPage />} />
-          <Route
-            path="/members"
-            element={
-              <ResourcePlaceholderPage
-                title="Members"
-                summary="Manage library members and borrowing."
-              />
-            }
-          />
+          <Route element={<RequireAdmin />}>
+            <Route path="/members" element={<MembersPage />} />
+          </Route>
           <Route
             path="/files"
             element={

@@ -34,6 +34,8 @@ const AREAS = [
 export function DashboardPage() {
   const email = getCurrentEmail();
   const role = getCurrentRole();
+  const canManageMembers = role === 'ADMIN';
+  const areas = AREAS.filter((area) => area.to !== '/members' || canManageMembers);
   const signedIn = hasValidAccessSession();
   const expiresAt = getAccessTokenExpiresAt();
   const expiresLabel = expiresAt
@@ -66,13 +68,15 @@ export function DashboardPage() {
               Go to Authors
             </Button>
           </Card>
-          <Card>
-            <h3>Manage Members</h3>
-            <p>Open membership and borrowing tools.</p>
-            <Button to="/members" variant="secondary">
-              Go to Members
-            </Button>
-          </Card>
+          {canManageMembers ? (
+            <Card>
+              <h3>Manage Members</h3>
+              <p>Open membership and borrowing tools.</p>
+              <Button to="/members" variant="secondary">
+                Go to Members
+              </Button>
+            </Card>
+          ) : null}
           <Card>
             <h3>Manage Files</h3>
             <p>Open uploads and downloads.</p>
@@ -109,7 +113,7 @@ export function DashboardPage() {
         <Card>
           <h2 className="dashboard__section-title">Library overview</h2>
           <ul className="dashboard__areas">
-            {AREAS.map((area) => (
+            {areas.map((area) => (
               <li key={area.to}>
                 <Link to={area.to}>{area.title}</Link>
                 <p>{area.copy}</p>
