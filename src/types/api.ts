@@ -8,6 +8,7 @@ export interface BookDto {
   isbn: string;
   publishedYear?: number | null;
   authorId: number;
+  available?: boolean;
 }
 
 export interface AuthorDto {

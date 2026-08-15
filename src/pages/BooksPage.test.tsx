@@ -38,13 +38,49 @@ vi.mock('../api/books', () => ({
 }));
 vi.mock('../api/members', () => ({ listMembers, borrowBook }));
 vi.mock('../api/user', () => ({ borrowOwnBook, getUserProfile: vi.fn() }));
+vi.mock('../api/authors', () => ({
+  listAuthors: vi.fn().mockResolvedValue({
+    content: [{ id: 1, name: 'Robert C. Martin' }],
+    totalElements: 1,
+    totalPages: 1,
+    size: 50,
+    number: 0,
+    first: true,
+    last: true,
+    empty: false,
+    numberOfElements: 1,
+    pageable: {
+      pageNumber: 0,
+      pageSize: 50,
+      offset: 0,
+      paged: true,
+      unpaged: false,
+      sort: { empty: true, sorted: false, unsorted: true },
+    },
+    sort: { empty: true, sorted: false, unsorted: true },
+  }),
+  createAuthor: vi.fn(),
+  updateAuthor: vi.fn(),
+  deleteAuthor: vi.fn(),
+  getAuthor: vi.fn(),
+}));
 
-const book: BookDto = {
+const availableBook: BookDto = {
   id: 9,
   title: 'Clean Code',
   isbn: '9780132350884',
   publishedYear: 2008,
   authorId: 1,
+  available: true,
+};
+
+const unavailableBook: BookDto = {
+  id: 10,
+  title: 'Effective Java',
+  isbn: '9780134685991',
+  publishedYear: 2018,
+  authorId: 1,
+  available: false,
 };
 
 const member: MemberDto = {
@@ -87,8 +123,8 @@ function renderBooksPage() {
 describe('BooksPage borrow flow', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    listBooks.mockResolvedValue(pageOf([book]));
-    searchBooks.mockResolvedValue(pageOf([book]));
+    listBooks.mockResolvedValue(pageOf([availableBook]));
+    searchBooks.mockResolvedValue(pageOf([availableBook]));
     listMembers.mockResolvedValue({
       ...pageOf([]),
       content: [member],
@@ -100,12 +136,13 @@ describe('BooksPage borrow flow', () => {
     borrowOwnBook.mockResolvedValue(undefined);
   });
 
-  it('lets a USER borrow without loading members or seeing catalogue management actions', async () => {
+  it('lets a USER borrow an available book without loading members or seeing catalogue management actions', async () => {
     getCurrentRole.mockReturnValue('USER');
     const user = userEvent.setup();
     renderBooksPage();
 
     expect(await screen.findByRole('button', { name: 'Borrow' })).toBeInTheDocument();
+    expect(within(screen.getByText('Clean Code').closest('tr') as HTMLElement).getByText('Available')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add Book' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
@@ -125,6 +162,33 @@ describe('BooksPage borrow flow', () => {
     expect(borrowBook).not.toHaveBeenCalled();
     expect(await screen.findByText('Book borrowed successfully.')).toBeInTheDocument();
     expect(listBooks).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not let a USER borrow an unavailable book', async () => {
+    getCurrentRole.mockReturnValue('USER');
+    listBooks.mockResolvedValue(pageOf([unavailableBook]));
+    renderBooksPage();
+
+    expect(await screen.findByText('Currently borrowed')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Borrowed' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Borrow' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(borrowOwnBook).not.toHaveBeenCalled();
+  });
+
+  it('refetches availability after a successful USER borrow', async () => {
+    getCurrentRole.mockReturnValue('USER');
+    listBooks
+      .mockResolvedValueOnce(pageOf([availableBook]))
+      .mockResolvedValueOnce(pageOf([{ ...availableBook, available: false }]));
+    const user = userEvent.setup();
+    renderBooksPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Borrow' }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Borrow' }));
+
+    expect(await screen.findByText('Currently borrowed')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Borrowed' })).toBeDisabled();
   });
 
   it('shows the backend 409 message when a USER borrow is rejected', async () => {
@@ -157,6 +221,7 @@ describe('BooksPage borrow flow', () => {
     expect(await screen.findByRole('button', { name: 'Add Book' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
+    expect(within(screen.getByText('Clean Code').closest('tr') as HTMLElement).getByText('Available')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Borrow' }));
 
@@ -175,5 +240,48 @@ describe('BooksPage borrow flow', () => {
     expect(borrowOwnBook).not.toHaveBeenCalled();
     expect(await screen.findByText('Book borrowed successfully.')).toBeInTheDocument();
     expect(listBooks).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps Edit and Delete for ADMIN when a book is unavailable', async () => {
+    getCurrentRole.mockReturnValue('ADMIN');
+    listBooks.mockResolvedValue(pageOf([unavailableBook]));
+    renderBooksPage();
+
+    expect(await screen.findByText('Currently borrowed')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Borrowed' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Add Book' })).toBeInTheDocument();
+    expect(borrowBook).not.toHaveBeenCalled();
+  });
+
+  it('does not let ADMIN edit availability in the book form', async () => {
+    getCurrentRole.mockReturnValue('ADMIN');
+    const user = userEvent.setup();
+    renderBooksPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Edit' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).queryByLabelText('Availability')).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('checkbox')).not.toBeInTheDocument();
+  });
+
+  it('sends available=true and available=false to the search API', async () => {
+    getCurrentRole.mockReturnValue('USER');
+    const user = userEvent.setup();
+    renderBooksPage();
+    await screen.findByText('Clean Code');
+
+    await user.selectOptions(screen.getByLabelText('Availability'), 'true');
+    await user.click(screen.getByRole('button', { name: 'Search' }));
+    await waitFor(() => {
+      expect(searchBooks).toHaveBeenCalledWith(expect.objectContaining({ available: true }));
+    });
+
+    await user.selectOptions(screen.getByLabelText('Availability'), 'false');
+    await user.click(screen.getByRole('button', { name: 'Search' }));
+    await waitFor(() => {
+      expect(searchBooks).toHaveBeenLastCalledWith(expect.objectContaining({ available: false }));
+    });
   });
 });

@@ -1,3 +1,4 @@
+import { Badge } from '../ui/Primitives';
 import type { BookDto } from '../../types/api';
 import type { BookSortField, SortDirection } from './bookListQuery';
 
@@ -19,6 +20,10 @@ const COLUMNS: { field: BookSortField; label: string }[] = [
   { field: 'isbn', label: 'ISBN' },
   { field: 'publishedYear', label: 'Published year' },
 ];
+
+function isAvailable(book: BookDto): boolean {
+  return book.available === true;
+}
 
 export function BookTable({
   books,
@@ -52,6 +57,7 @@ export function BookTable({
               );
             })}
             <th>Author ID</th>
+            <th>Availability</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -59,50 +65,60 @@ export function BookTable({
           {loading && books.length === 0
             ? Array.from({ length: 5 }, (_, index) => (
                 <tr key={`skeleton-${index}`} className="book-table__skeleton">
-                  <td colSpan={6}>Loading books…</td>
+                  <td colSpan={7}>Loading books…</td>
                 </tr>
               ))
-            : books.map((book) => (
-                <tr key={book.id ?? `${book.isbn}-${book.title}`}>
-                  <td>{book.id ?? '—'}</td>
-                  <td>{book.title}</td>
-                  <td>{book.isbn}</td>
-                  <td>{book.publishedYear ?? '—'}</td>
-                  <td>{book.authorId}</td>
-                  <td>
-                    <div className="book-table__actions">
-                      <button
-                        type="button"
-                        className="book-table__action"
-                        disabled={book.id == null}
-                        onClick={() => onBorrow(book)}
-                      >
-                        Borrow
-                      </button>
-                      {canManage ? (
-                        <>
-                          <button
-                            type="button"
-                            className="book-table__action"
-                            disabled={book.id == null}
-                            onClick={() => onEdit(book)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="book-table__action"
-                            disabled={book.id == null}
-                            onClick={() => onDelete(book)}
-                          >
-                            Delete
-                          </button>
-                        </>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+            : books.map((book) => {
+                const available = isAvailable(book);
+                return (
+                  <tr key={book.id ?? `${book.isbn}-${book.title}`}>
+                    <td>{book.id ?? '—'}</td>
+                    <td>{book.title}</td>
+                    <td>{book.isbn}</td>
+                    <td>{book.publishedYear ?? '—'}</td>
+                    <td>{book.authorId}</td>
+                    <td>
+                      <Badge>{available ? 'Available' : 'Currently borrowed'}</Badge>
+                    </td>
+                    <td>
+                      <div className="book-table__actions">
+                        <button
+                          type="button"
+                          className="book-table__action"
+                          disabled={book.id == null || !available}
+                          onClick={() => {
+                            if (available) {
+                              onBorrow(book);
+                            }
+                          }}
+                        >
+                          {available ? 'Borrow' : 'Borrowed'}
+                        </button>
+                        {canManage ? (
+                          <>
+                            <button
+                              type="button"
+                              className="book-table__action"
+                              disabled={book.id == null}
+                              onClick={() => onEdit(book)}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="book-table__action"
+                              disabled={book.id == null}
+                              onClick={() => onDelete(book)}
+                            >
+                              Delete
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
         </tbody>
       </table>
     </div>

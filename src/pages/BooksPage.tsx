@@ -155,7 +155,7 @@ export function BooksPage() {
   }
 
   async function handleAdminBorrow(memberId: number) {
-    if (!canManageBooks || !borrowBookTarget?.id || submitting) {
+    if (!canManageBooks || !borrowBookTarget?.id || borrowBookTarget.available !== true || submitting) {
       return;
     }
     setSubmitting(true);
@@ -171,7 +171,7 @@ export function BooksPage() {
   }
 
   async function handleUserBorrow() {
-    if (canManageBooks || !borrowBookTarget?.id || submitting) {
+    if (canManageBooks || !borrowBookTarget?.id || borrowBookTarget.available !== true || submitting) {
       return;
     }
     setSubmitting(true);
@@ -306,7 +306,7 @@ export function BooksPage() {
               setDeleteTarget(book);
             }}
             onBorrow={(book) => {
-              if (book.id == null) {
+              if (book.id == null || book.available !== true) {
                 return;
               }
               setSuccessMessage(null);
