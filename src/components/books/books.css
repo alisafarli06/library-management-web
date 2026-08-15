@@ -1,0 +1,140 @@
+.book-page {
+  display: grid;
+  gap: 1.15rem;
+}
+
+.book-filters {
+  display: grid;
+  gap: 1rem;
+}
+
+.book-filters__grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.book-filters__field {
+  display: grid;
+  gap: 0.3rem;
+  font-family: var(--ui);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.book-filters__field input,
+.book-filters__field select {
+  min-height: 2.4rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: #fffdf8;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 400;
+  font-size: 0.875rem;
+}
+
+.book-filters__field input:focus,
+.book-filters__field select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.book-filters__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.book-table-wrap {
+  overflow-x: auto;
+}
+
+.book-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--ui);
+  font-size: 0.875rem;
+}
+
+.book-table th,
+.book-table td {
+  padding: 0.7rem 0.65rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.book-table th {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.book-table__sort {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+
+.book-table__sort.is-active {
+  color: var(--ink);
+}
+
+.book-table__sort:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.book-table__skeleton td {
+  color: var(--muted);
+}
+
+.book-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-family: var(--ui);
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.book-pagination__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.book-alert {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid #e8c4bc;
+  background: #f8ece9;
+  color: #6b2a22;
+  font-family: var(--ui);
+  font-size: 0.875rem;
+}
+
+.book-empty-action {
+  margin-top: 0.9rem;
+}
+
+@media (max-width: 1024px) {
+  .book-filters__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .book-filters__grid {
+    grid-template-columns: 1fr;
+  }
+}

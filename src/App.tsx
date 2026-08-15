@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { BooksPage } from './pages/BooksPage';
 import { ResourcePlaceholderPage } from './pages/ResourcePlaceholderPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { GuestOnly, RequireAuth } from './routes/guards';
@@ -18,15 +19,7 @@ export default function App() {
         <Route path="/app" element={<Navigate to="/dashboard" replace />} />
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route
-            path="/books"
-            element={
-              <ResourcePlaceholderPage
-                title="Books"
-                summary="Search, create, and maintain titles in the library catalogue."
-              />
-            }
-          />
+          <Route path="/books" element={<BooksPage />} />
           <Route
             path="/authors"
             element={
