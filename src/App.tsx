@@ -6,6 +6,7 @@ import { BooksPage } from './pages/BooksPage';
 import { AuthorsPage } from './pages/AuthorsPage';
 import { MembersPage } from './pages/MembersPage';
 import { FilesPage } from './pages/FilesPage';
+import { MyLoansPage } from './pages/MyLoansPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { GuestOnly, RequireAdmin, RequireAuth } from './routes/guards';
 
@@ -22,6 +23,7 @@ export default function App() {
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/books" element={<BooksPage />} />
+          <Route path="/my-loans" element={<MyLoansPage />} />
           <Route path="/authors" element={<AuthorsPage />} />
           <Route element={<RequireAdmin />}>
             <Route path="/members" element={<MembersPage />} />

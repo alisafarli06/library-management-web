@@ -9,14 +9,16 @@ interface NavItem {
 export const NAV_ITEMS: readonly NavItem[] = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/books', label: 'Books' },
+  { to: '/my-loans', label: 'My Loans' },
   { to: '/authors', label: 'Authors' },
-  { to: '/members', label: 'Members', adminOnly: true },
   { to: '/files', label: 'Files' },
+  { to: '/members', label: 'Members', adminOnly: true },
 ];
 
 export const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/books': 'Books',
+  '/my-loans': 'My Loans',
   '/authors': 'Authors',
   '/members': 'Members',
   '/files': 'Files',

@@ -49,6 +49,16 @@ export interface FileMetadataDto {
   createdAt: string;
 }
 
+export interface LoanDto {
+  id: number;
+  memberId: number;
+  memberName: string;
+  bookId: number;
+  bookTitle: string;
+  borrowedAt: string;
+  returnedAt: string | null;
+}
+
 export interface ErrorResponse {
   timestamp: string;
   status: number;
