@@ -8,6 +8,7 @@ import { MembersPage } from './pages/MembersPage';
 import { FilesPage } from './pages/FilesPage';
 import { MyLoansPage } from './pages/MyLoansPage';
 import { AdminLoansPage } from './pages/AdminLoansPage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { GuestOnly, RequireAdmin, RequireAuth } from './routes/guards';
 
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="/authors" element={<AuthorsPage />} />
           <Route element={<RequireAdmin />}>
             <Route path="/loans" element={<AdminLoansPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/members" element={<MembersPage />} />
           </Route>
           <Route path="/files" element={<FilesPage />} />

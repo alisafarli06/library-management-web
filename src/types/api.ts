@@ -59,6 +59,32 @@ export interface LoanDto {
   returnedAt: string | null;
 }
 
+export interface LoanAnalyticsSummaryDto {
+  totalLoans: number;
+  activeLoans: number;
+  returnedLoans: number;
+  totalBooksBorrowed: number;
+  totalMembersWithLoans: number;
+}
+
+export interface BookBorrowAnalyticsDto {
+  bookId: number;
+  bookTitle: string;
+  borrowCount: number;
+}
+
+export interface AuthorBorrowAnalyticsDto {
+  authorId: number;
+  authorName: string;
+  borrowCount: number;
+}
+
+export interface MemberBorrowAnalyticsDto {
+  memberId: number;
+  memberName: string;
+  borrowCount: number;
+}
+
 export interface ErrorResponse {
   timestamp: string;
   status: number;
