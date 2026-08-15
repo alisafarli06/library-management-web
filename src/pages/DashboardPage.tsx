@@ -5,7 +5,7 @@ import {
   getCurrentRole,
   hasValidAccessSession,
 } from '../auth/session';
-import { Badge, Button, Card, EmptyState, PageHeader } from '../components/ui/Primitives';
+import { Badge, Button, Card, PageHeader } from '../components/ui/Primitives';
 import './DashboardPage.css';
 
 const AREAS = [
@@ -17,7 +17,7 @@ const AREAS = [
   {
     to: '/authors',
     title: 'Authors',
-    copy: 'Maintain the names attached to the collection.',
+    copy: 'Names attached to titles in the collection.',
   },
   {
     to: '/members',
@@ -62,8 +62,8 @@ export function DashboardPage() {
             </Button>
           </Card>
           <Card>
-            <h3>Manage Authors</h3>
-            <p>Open the author records workspace.</p>
+            <h3>{canManageMembers ? 'Manage Authors' : 'Browse Authors'}</h3>
+            <p>{canManageMembers ? 'Open the author records workspace.' : 'Open the author list.'}</p>
             <Button to="/authors" variant="secondary">
               Go to Authors
             </Button>
@@ -122,11 +122,6 @@ export function DashboardPage() {
           </ul>
         </Card>
       </div>
-
-      <EmptyState
-        title="This section will be available soon."
-        body="Catalogue, membership, and file tools are connected to the API but are not on this screen yet. Use the navigation or quick actions to open each workspace placeholder."
-      />
     </div>
   );
 }

@@ -36,10 +36,17 @@ export function isAccessTokenExpired(): boolean {
 
 export function hasValidAccessSession(): boolean {
   const token = readAccessToken();
-  if (!token || isTokenExpired(token)) {
+  if (!token) {
     return false;
   }
-  return getTokenEmail(token) !== null && getTokenRole(token) !== null;
+  const hasClaims = getTokenEmail(token) !== null && getTokenRole(token) !== null;
+  if (!hasClaims) {
+    return false;
+  }
+  if (!isTokenExpired(token)) {
+    return true;
+  }
+  return Boolean(readRefreshToken());
 }
 
 export function getAccessTokenExpiresAt(): Date | null {

@@ -11,6 +11,11 @@ import { AdminLoansPage } from './pages/AdminLoansPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { GuestOnly, RequireAdmin, RequireAuth } from './routes/guards';
+import { hasValidAccessSession } from './auth/session';
+
+function FallbackRedirect() {
+  return <Navigate to={hasValidAccessSession() ? '/dashboard' : '/login'} replace />;
+}
 
 export default function App() {
   return (
@@ -35,7 +40,7 @@ export default function App() {
           <Route path="/files" element={<FilesPage />} />
         </Route>
       </Route>
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<FallbackRedirect />} />
     </Routes>
   );
 }
