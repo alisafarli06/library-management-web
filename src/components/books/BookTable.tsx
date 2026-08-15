@@ -7,6 +7,7 @@ interface BookTableProps {
   sortDirection: SortDirection;
   loading: boolean;
   onSort: (field: BookSortField) => void;
+  onEdit: (book: BookDto) => void;
 }
 
 const COLUMNS: { field: BookSortField; label: string }[] = [
@@ -16,7 +17,7 @@ const COLUMNS: { field: BookSortField; label: string }[] = [
   { field: 'publishedYear', label: 'Published year' },
 ];
 
-export function BookTable({ books, sortField, sortDirection, loading, onSort }: BookTableProps) {
+export function BookTable({ books, sortField, sortDirection, loading, onSort, onEdit }: BookTableProps) {
   return (
     <div className="book-table-wrap">
       <table className="book-table">
@@ -38,13 +39,14 @@ export function BookTable({ books, sortField, sortDirection, loading, onSort }: 
               );
             })}
             <th>Author ID</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {loading && books.length === 0
             ? Array.from({ length: 5 }, (_, index) => (
                 <tr key={`skeleton-${index}`} className="book-table__skeleton">
-                  <td colSpan={5}>Loading books…</td>
+                  <td colSpan={6}>Loading books…</td>
                 </tr>
               ))
             : books.map((book) => (
@@ -54,6 +56,16 @@ export function BookTable({ books, sortField, sortDirection, loading, onSort }: 
                   <td>{book.isbn}</td>
                   <td>{book.publishedYear ?? '—'}</td>
                   <td>{book.authorId}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="book-table__action"
+                      disabled={book.id == null}
+                      onClick={() => onEdit(book)}
+                    >
+                      Edit
+                    </button>
+                  </td>
                 </tr>
               ))}
         </tbody>

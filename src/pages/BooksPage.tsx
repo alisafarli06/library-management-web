@@ -1,8 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { listBooks, searchBooks } from '../api/books';
+import { createBook, listBooks, searchBooks, updateBook } from '../api/books';
 import { errorMessage } from '../components/auth/formErrors';
 import { BookFilters } from '../components/books/BookFilters';
+import {
+  BookForm,
+  EMPTY_BOOK_FORM,
+  bookToFormValues,
+  type BookFormValues,
+} from '../components/books/BookForm';
 import { BookPagination } from '../components/books/BookPagination';
 import { BookTable } from '../components/books/BookTable';
 import {
@@ -42,6 +48,11 @@ export function BooksPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
+  const [editor, setEditor] = useState<{ mode: 'create' | 'edit'; bookId?: number; values: BookFormValues } | null>(
+    null,
+  );
+  const [submitting, setSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     setDraftQuery(appliedQuery);
@@ -106,6 +117,34 @@ export function BooksPage() {
     replaceQuery({ ...appliedQuery, page: 0, sortField: field, sortDirection });
   }
 
+  function closeEditor() {
+    if (!submitting) {
+      setEditor(null);
+    }
+  }
+
+  async function handleSave(book: BookDto) {
+    if (!editor || submitting) {
+      return;
+    }
+    setSubmitting(true);
+    try {
+      if (editor.mode === 'create') {
+        await createBook(book);
+        setSuccessMessage('Book created successfully.');
+      } else if (editor.bookId != null) {
+        await updateBook(editor.bookId, book);
+        setSuccessMessage('Book updated successfully.');
+      } else {
+        throw new Error('Unable to save the book.');
+      }
+      setEditor(null);
+      setReloadToken((value) => value + 1);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   const books = result?.content ?? [];
   const totalPages = result?.totalPages ?? 0;
   const totalElements = result?.totalElements ?? 0;
@@ -113,10 +152,27 @@ export function BooksPage() {
 
   return (
     <div className="book-page">
-      <PageHeader
-        title="Books"
-        description="Browse the catalogue. Search uses the API title, author name, year range, and availability filters."
-      />
+      <div className="book-page__toolbar">
+        <PageHeader
+          title="Books"
+          description="Browse the catalogue. Search uses the API title, author name, year range, and availability filters."
+        />
+        <Button
+          type="button"
+          onClick={() => {
+            setSuccessMessage(null);
+            setEditor({ mode: 'create', values: EMPTY_BOOK_FORM });
+          }}
+        >
+          Add Book
+        </Button>
+      </div>
+
+      {successMessage ? (
+        <p className="book-success" role="status">
+          {successMessage}
+        </p>
+      ) : null}
 
       <Card>
         <BookFilters
@@ -164,6 +220,13 @@ export function BooksPage() {
             sortDirection={appliedQuery.sortDirection}
             loading={loading}
             onSort={changeSort}
+            onEdit={(book) => {
+              if (book.id == null) {
+                return;
+              }
+              setSuccessMessage(null);
+              setEditor({ mode: 'edit', bookId: book.id, values: bookToFormValues(book) });
+            }}
           />
           <BookPagination
             page={currentPage}
@@ -174,6 +237,16 @@ export function BooksPage() {
             onNext={() => replaceQuery({ ...appliedQuery, page: appliedQuery.page + 1 })}
           />
         </Card>
+      ) : null}
+
+      {editor ? (
+        <BookForm
+          mode={editor.mode}
+          initialValues={editor.values}
+          submitting={submitting}
+          onSubmit={handleSave}
+          onCancel={closeEditor}
+        />
       ) : null}
     </div>
   );
