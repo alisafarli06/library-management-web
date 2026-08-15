@@ -141,6 +141,12 @@
   font-size: 0.875rem;
 }
 
+.book-table__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
 .book-table__action {
   border: 1px solid var(--line-strong);
   background: var(--surface);

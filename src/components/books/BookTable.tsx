@@ -6,8 +6,11 @@ interface BookTableProps {
   sortField: BookSortField;
   sortDirection: SortDirection;
   loading: boolean;
+  canManage: boolean;
   onSort: (field: BookSortField) => void;
   onEdit: (book: BookDto) => void;
+  onDelete: (book: BookDto) => void;
+  onBorrow: (book: BookDto) => void;
 }
 
 const COLUMNS: { field: BookSortField; label: string }[] = [
@@ -17,7 +20,17 @@ const COLUMNS: { field: BookSortField; label: string }[] = [
   { field: 'publishedYear', label: 'Published year' },
 ];
 
-export function BookTable({ books, sortField, sortDirection, loading, onSort, onEdit }: BookTableProps) {
+export function BookTable({
+  books,
+  sortField,
+  sortDirection,
+  loading,
+  canManage,
+  onSort,
+  onEdit,
+  onDelete,
+  onBorrow,
+}: BookTableProps) {
   return (
     <div className="book-table-wrap">
       <table className="book-table">
@@ -57,14 +70,36 @@ export function BookTable({ books, sortField, sortDirection, loading, onSort, on
                   <td>{book.publishedYear ?? '—'}</td>
                   <td>{book.authorId}</td>
                   <td>
-                    <button
-                      type="button"
-                      className="book-table__action"
-                      disabled={book.id == null}
-                      onClick={() => onEdit(book)}
-                    >
-                      Edit
-                    </button>
+                    <div className="book-table__actions">
+                      <button
+                        type="button"
+                        className="book-table__action"
+                        disabled={book.id == null}
+                        onClick={() => onBorrow(book)}
+                      >
+                        Borrow
+                      </button>
+                      {canManage ? (
+                        <>
+                          <button
+                            type="button"
+                            className="book-table__action"
+                            disabled={book.id == null}
+                            onClick={() => onEdit(book)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="book-table__action"
+                            disabled={book.id == null}
+                            onClick={() => onDelete(book)}
+                          >
+                            Delete
+                          </button>
+                        </>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))}

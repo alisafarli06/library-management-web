@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { createBook, listBooks, searchBooks, updateBook } from '../api/books';
+import { createBook, deleteBook, listBooks, searchBooks, updateBook } from '../api/books';
+import { borrowBook } from '../api/members';
+import { borrowOwnBook } from '../api/user';
+import { getCurrentRole } from '../auth/session';
 import { errorMessage } from '../components/auth/formErrors';
+import { BookBorrowDialog } from '../components/books/BookBorrowDialog';
+import { BookConfirmDialog } from '../components/books/BookConfirmDialog';
 import { BookFilters } from '../components/books/BookFilters';
 import {
   BookForm,
@@ -53,6 +58,10 @@ export function BooksPage() {
   );
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [borrowBookTarget, setBorrowBookTarget] = useState<BookDto | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<BookDto | null>(null);
+  const canManageBooks = getCurrentRole() === 'ADMIN';
 
   useEffect(() => {
     setDraftQuery(appliedQuery);
@@ -124,7 +133,7 @@ export function BooksPage() {
   }
 
   async function handleSave(book: BookDto) {
-    if (!editor || submitting) {
+    if (!canManageBooks || !editor || submitting) {
       return;
     }
     setSubmitting(true);
@@ -145,6 +154,62 @@ export function BooksPage() {
     }
   }
 
+  async function handleAdminBorrow(memberId: number) {
+    if (!canManageBooks || !borrowBookTarget?.id || submitting) {
+      return;
+    }
+    setSubmitting(true);
+    setActionError(null);
+    try {
+      await borrowBook(memberId, borrowBookTarget.id);
+      setSuccessMessage('Book borrowed successfully.');
+      setBorrowBookTarget(null);
+      setReloadToken((value) => value + 1);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleUserBorrow() {
+    if (canManageBooks || !borrowBookTarget?.id || submitting) {
+      return;
+    }
+    setSubmitting(true);
+    setActionError(null);
+    try {
+      await borrowOwnBook(borrowBookTarget.id);
+      setSuccessMessage('Book borrowed successfully.');
+      setBorrowBookTarget(null);
+      setReloadToken((value) => value + 1);
+    } catch (error) {
+      setActionError(errorMessage(error, 'Unable to borrow the book.'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!canManageBooks || !deleteTarget?.id || submitting) {
+      return;
+    }
+    setSubmitting(true);
+    setActionError(null);
+    try {
+      await deleteBook(deleteTarget.id);
+      setSuccessMessage('Book deleted successfully.');
+      setDeleteTarget(null);
+      if ((result?.content.length ?? 0) === 1 && appliedQuery.page > 0) {
+        replaceQuery({ ...appliedQuery, page: appliedQuery.page - 1 });
+      } else {
+        setReloadToken((value) => value + 1);
+      }
+    } catch (error) {
+      setActionError(errorMessage(error, 'Unable to delete the book.'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   const books = result?.content ?? [];
   const totalPages = result?.totalPages ?? 0;
   const totalElements = result?.totalElements ?? 0;
@@ -157,15 +222,18 @@ export function BooksPage() {
           title="Books"
           description="Browse the catalogue. Search uses the API title, author name, year range, and availability filters."
         />
-        <Button
-          type="button"
-          onClick={() => {
-            setSuccessMessage(null);
-            setEditor({ mode: 'create', values: EMPTY_BOOK_FORM });
-          }}
-        >
-          Add Book
-        </Button>
+        {canManageBooks ? (
+          <Button
+            type="button"
+            onClick={() => {
+              setSuccessMessage(null);
+              setActionError(null);
+              setEditor({ mode: 'create', values: EMPTY_BOOK_FORM });
+            }}
+          >
+            Add Book
+          </Button>
+        ) : null}
       </div>
 
       {successMessage ? (
@@ -219,13 +287,31 @@ export function BooksPage() {
             sortField={appliedQuery.sortField}
             sortDirection={appliedQuery.sortDirection}
             loading={loading}
+            canManage={canManageBooks}
             onSort={changeSort}
             onEdit={(book) => {
+              if (!canManageBooks || book.id == null) {
+                return;
+              }
+              setSuccessMessage(null);
+              setActionError(null);
+              setEditor({ mode: 'edit', bookId: book.id, values: bookToFormValues(book) });
+            }}
+            onDelete={(book) => {
+              if (!canManageBooks || book.id == null) {
+                return;
+              }
+              setSuccessMessage(null);
+              setActionError(null);
+              setDeleteTarget(book);
+            }}
+            onBorrow={(book) => {
               if (book.id == null) {
                 return;
               }
               setSuccessMessage(null);
-              setEditor({ mode: 'edit', bookId: book.id, values: bookToFormValues(book) });
+              setActionError(null);
+              setBorrowBookTarget(book);
             }}
           />
           <BookPagination
@@ -239,7 +325,7 @@ export function BooksPage() {
         </Card>
       ) : null}
 
-      {editor ? (
+      {canManageBooks && editor ? (
         <BookForm
           mode={editor.mode}
           initialValues={editor.values}
@@ -247,6 +333,71 @@ export function BooksPage() {
           onSubmit={handleSave}
           onCancel={closeEditor}
         />
+      ) : null}
+
+      {canManageBooks && borrowBookTarget ? (
+        <BookBorrowDialog
+          book={borrowBookTarget}
+          submitting={submitting}
+          onSubmit={handleAdminBorrow}
+          onCancel={() => {
+            if (!submitting) {
+              setBorrowBookTarget(null);
+            }
+          }}
+        />
+      ) : null}
+
+      {!canManageBooks && borrowBookTarget ? (
+        <BookConfirmDialog
+          title="Borrow this book?"
+          confirmLabel="Borrow"
+          submitting={submitting}
+          onConfirm={() => {
+            void handleUserBorrow();
+          }}
+          onCancel={() => {
+            if (!submitting) {
+              setBorrowBookTarget(null);
+              setActionError(null);
+            }
+          }}
+        >
+          <p className="book-form__hint">
+            Borrow <strong>{borrowBookTarget.title}</strong> for your library account?
+          </p>
+          {actionError ? (
+            <p className="book-alert" role="alert">
+              {actionError}
+            </p>
+          ) : null}
+        </BookConfirmDialog>
+      ) : null}
+
+      {canManageBooks && deleteTarget ? (
+        <BookConfirmDialog
+          title="Delete book"
+          confirmLabel="Delete book"
+          submitting={submitting}
+          onConfirm={() => {
+            void handleDelete();
+          }}
+          onCancel={() => {
+            if (!submitting) {
+              setDeleteTarget(null);
+              setActionError(null);
+            }
+          }}
+        >
+          <p className="book-form__hint">
+            Delete <strong>{deleteTarget.title}</strong>? This cannot be undone from this screen.
+          </p>
+          {actionError ? (
+            <p className="book-alert" role="alert">
+              {actionError}
+            </p>
+          ) : null}
+        </BookConfirmDialog>
       ) : null}
     </div>
   );
