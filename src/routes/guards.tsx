@@ -10,7 +10,7 @@ export function RequireAuth() {
 
 export function GuestOnly() {
   if (hasValidAccessSession()) {
-    return <Navigate to="/app" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
   return <Outlet />;
 }

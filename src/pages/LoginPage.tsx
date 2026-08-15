@@ -41,7 +41,7 @@ export function LoginPage() {
 
     try {
       await login({ email: trimmedEmail, password });
-      navigate('/app', { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (error) {
       const backendFields = fieldErrorsFrom(error);
       setFieldErrors(backendFields);

@@ -1,7 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
-import { AppShellPage } from './pages/AppShellPage';
+import { DashboardPage } from './pages/DashboardPage';
+import { ResourcePlaceholderPage } from './pages/ResourcePlaceholderPage';
+import { AppLayout } from './components/layout/AppLayout';
 import { GuestOnly, RequireAuth } from './routes/guards';
 
 export default function App() {
@@ -13,7 +15,46 @@ export default function App() {
         <Route path="/register" element={<RegisterPage />} />
       </Route>
       <Route element={<RequireAuth />}>
-        <Route path="/app" element={<AppShellPage />} />
+        <Route path="/app" element={<Navigate to="/dashboard" replace />} />
+        <Route element={<AppLayout />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route
+            path="/books"
+            element={
+              <ResourcePlaceholderPage
+                title="Books"
+                summary="Search, create, and maintain titles in the library catalogue."
+              />
+            }
+          />
+          <Route
+            path="/authors"
+            element={
+              <ResourcePlaceholderPage
+                title="Authors"
+                summary="Keep author records that books can reference."
+              />
+            }
+          />
+          <Route
+            path="/members"
+            element={
+              <ResourcePlaceholderPage
+                title="Members"
+                summary="Manage library members and borrowing."
+              />
+            }
+          />
+          <Route
+            path="/files"
+            element={
+              <ResourcePlaceholderPage
+                title="Files"
+                summary="Upload and download files through the existing file API."
+              />
+            }
+          />
+        </Route>
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

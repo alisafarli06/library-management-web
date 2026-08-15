@@ -1,6 +1,6 @@
 import type { AuthenticationResponse } from '../types/api';
 import type { Role } from '../types/enums';
-import { getTokenEmail, getTokenRole, isTokenExpired } from './jwt';
+import { getTokenEmail, getTokenExpiration, getTokenRole, isTokenExpired } from './jwt';
 import {
   clearTokens,
   getAccessToken as readAccessToken,
@@ -40,6 +40,18 @@ export function hasValidAccessSession(): boolean {
     return false;
   }
   return getTokenEmail(token) !== null && getTokenRole(token) !== null;
+}
+
+export function getAccessTokenExpiresAt(): Date | null {
+  const token = readAccessToken();
+  if (!token) {
+    return null;
+  }
+  const exp = getTokenExpiration(token);
+  if (exp === null) {
+    return null;
+  }
+  return new Date(exp * 1000);
 }
 
 export function saveAuthentication(response: AuthenticationResponse): void {
