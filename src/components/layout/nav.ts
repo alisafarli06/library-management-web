@@ -10,15 +10,17 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/books', label: 'Books' },
   { to: '/my-loans', label: 'My Loans' },
+  { to: '/loans', label: 'Loans', adminOnly: true },
   { to: '/authors', label: 'Authors' },
-  { to: '/files', label: 'Files' },
   { to: '/members', label: 'Members', adminOnly: true },
+  { to: '/files', label: 'Files' },
 ];
 
 export const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/books': 'Books',
   '/my-loans': 'My Loans',
+  '/loans': 'Loan Management',
   '/authors': 'Authors',
   '/members': 'Members',
   '/files': 'Files',
