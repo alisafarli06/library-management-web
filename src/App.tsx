@@ -5,7 +5,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { BooksPage } from './pages/BooksPage';
 import { AuthorsPage } from './pages/AuthorsPage';
 import { MembersPage } from './pages/MembersPage';
-import { ResourcePlaceholderPage } from './pages/ResourcePlaceholderPage';
+import { FilesPage } from './pages/FilesPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { GuestOnly, RequireAdmin, RequireAuth } from './routes/guards';
 
@@ -26,15 +26,7 @@ export default function App() {
           <Route element={<RequireAdmin />}>
             <Route path="/members" element={<MembersPage />} />
           </Route>
-          <Route
-            path="/files"
-            element={
-              <ResourcePlaceholderPage
-                title="Files"
-                summary="Upload and download files through the existing file API."
-              />
-            }
-          />
+          <Route path="/files" element={<FilesPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
