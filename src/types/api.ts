@@ -43,6 +43,24 @@ export interface RefreshTokenRequest {
   refreshToken: string;
 }
 
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface UserProfileDto {
+  name: string;
+  email: string;
+}
+
+export interface UpdateProfileRequest {
+  name: string;
+}
+
+export interface MessageResponse {
+  message: string;
+}
+
 export interface AuthenticationResponse {
   accessToken: string;
   refreshToken: string;

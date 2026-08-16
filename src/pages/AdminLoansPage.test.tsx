@@ -61,7 +61,7 @@ vi.mock('../api/user', () => ({
     },
     sort: { empty: true, sorted: false, unsorted: true },
   }),
-  getUserProfile: vi.fn(),
+  getUserProfile: vi.fn().mockResolvedValue({ name: 'Library User', email: 'user@library.com' }),
   borrowOwnBook: vi.fn(),
   returnOwnBook: vi.fn(),
 }));
@@ -213,7 +213,7 @@ describe('AdminLoansPage', () => {
     getCurrentRole.mockReturnValue('USER');
     getCurrentEmail.mockReturnValue('user@library.com');
     renderAppAt('/loans');
-    expect(await screen.findByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Welcome back/ })).toBeInTheDocument();
     expect(searchLoans).not.toHaveBeenCalled();
     expect(screen.queryByRole('link', { name: 'Loans' })).not.toBeInTheDocument();
   });

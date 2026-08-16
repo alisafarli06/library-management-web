@@ -17,16 +17,20 @@
 }
 
 .auth-brand {
+  /* Brand panel stays dark in both themes; do not inherit page text tokens. */
+  --color-text-inverse: var(--color-brand-text);
+  --color-sidebar-text: var(--color-brand-text-muted);
+  --color-primary-soft: var(--color-brand-accent);
   position: relative;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--auth-32) clamp(24px, 4vw, 48px);
-  color: var(--color-text-inverse);
+  color: var(--color-brand-text);
   background-color: #1f1c1a;
   background-image:
-    radial-gradient(ellipse 80% 60% at 18% 22%, rgba(63, 92, 84, 0.42), transparent 62%),
+    radial-gradient(ellipse 80% 60% at 18% 22%, var(--color-brand-accent-soft), transparent 62%),
     linear-gradient(148deg, #221e1c 0%, #1c2622 52%, #24362e 100%),
     radial-gradient(rgba(247, 243, 236, 0.08) 0.9px, transparent 0.9px);
   background-size: auto, auto, 16px 16px;
@@ -70,7 +74,7 @@
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--color-primary-soft);
+  color: var(--color-brand-accent);
 }
 
 .auth-brand__title {
@@ -80,7 +84,7 @@
   font-weight: 550;
   letter-spacing: -0.03em;
   line-height: 1.2;
-  color: var(--color-text-inverse);
+  color: var(--color-brand-text);
 }
 
 .auth-brand__copy {
@@ -89,7 +93,7 @@
   font-family: var(--auth-font);
   font-size: 0.9375rem;
   line-height: 1.65;
-  color: var(--color-sidebar-text);
+  color: var(--color-brand-text-muted);
 }
 
 .auth-brand__features {
@@ -103,7 +107,7 @@
   font-size: 0.8125rem;
   font-weight: 500;
   letter-spacing: 0.04em;
-  color: var(--color-text-inverse);
+  color: var(--color-brand-text);
 }
 
 .auth-brand__features li {
@@ -116,10 +120,34 @@
   width: 16px;
   height: 16px;
   flex: 0 0 16px;
-  color: var(--color-primary-soft);
+  color: var(--color-brand-accent);
 }
 
 .auth-panel {
+  /*
+   * Form column is always a light product surface, even when the app theme is dark.
+   * Hardcoded beige/white backgrounds previously mixed with global dark text/input tokens.
+   */
+  --color-background: #ede7dd;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f3eee6;
+  --color-text: #2b2724;
+  --color-text-secondary: #5b554e;
+  --color-text-muted: #7a736c;
+  --color-border: rgba(43, 39, 36, 0.14);
+  --color-border-strong: #cfc6b8;
+  --color-input-bg: #ffffff;
+  --color-input-text: #2b2724;
+  --color-input-placeholder: #8a837a;
+  --color-primary: #3f5c54;
+  --color-primary-hover: #334a44;
+  --color-primary-soft: #e4ece9;
+  --color-primary-on: #f7faf8;
+  --color-focus: #3f5c54;
+  --color-focus-ring: rgba(63, 92, 84, 0.25);
+  --color-danger: #8f3d38;
+  --color-danger-soft: #f4e7e5;
+  --color-sidebar: #2a2724;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -127,15 +155,17 @@
   min-height: 100dvh;
   overflow-y: auto;
   padding: var(--auth-32);
-  background: #ede7dd;
+  background: var(--color-background);
+  color: var(--color-text);
+  color-scheme: light;
 }
 
 .auth-panel__card {
   width: min(480px, 100%);
   padding: var(--auth-32);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--color-border);
   border-radius: var(--auth-radius);
-  background: #ffffff;
+  background: var(--color-surface);
   box-shadow: 0 12px 32px rgba(43, 39, 36, 0.1);
   animation: auth-card-in 420ms ease;
 }
@@ -162,6 +192,7 @@
   font-weight: 550;
   letter-spacing: -0.02em;
   line-height: 1.25;
+  color: var(--color-text);
 }
 
 .auth-panel__subtitle {
@@ -225,13 +256,17 @@
   padding: 10px 14px;
   border: 1px solid var(--color-border-strong);
   border-radius: 8px;
-  background: var(--color-surface);
-  color: var(--color-text);
+  background: var(--color-input-bg);
+  color: var(--color-input-text);
   font-family: var(--auth-font);
   font-size: 0.9375rem;
   font-weight: 400;
   box-shadow: none;
   transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.field__input::placeholder {
+  color: var(--color-input-placeholder);
 }
 
 .field__control .field__input {
@@ -249,7 +284,7 @@
 .field__input:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 4px var(--color-primary-soft);
+  box-shadow: 0 0 0 4px var(--color-focus-ring);
 }
 
 .field__input:focus-visible {
@@ -273,9 +308,9 @@
 .field__input:-webkit-autofill,
 .field__input:-webkit-autofill:hover,
 .field__input:-webkit-autofill:focus {
-  -webkit-text-fill-color: var(--color-text);
-  caret-color: var(--color-text);
-  box-shadow: 0 0 0 1000px var(--color-surface) inset;
+  -webkit-text-fill-color: var(--color-input-text);
+  caret-color: var(--color-input-text);
+  box-shadow: 0 0 0 1000px var(--color-input-bg) inset;
   transition: background-color 99999s ease-out;
 }
 

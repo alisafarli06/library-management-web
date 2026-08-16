@@ -47,6 +47,23 @@ vi.mock('../api/members', () => ({
   borrowBook: vi.fn(),
 }));
 
+vi.mock('../api/user', () => ({
+  getUserLoans: vi.fn().mockResolvedValue({
+    content: [],
+    totalElements: 0,
+    totalPages: 0,
+    size: 50,
+    number: 0,
+    first: true,
+    last: true,
+    empty: true,
+  }),
+  getUserProfile: vi.fn().mockResolvedValue({ name: 'Library User', email: 'user@library.com' }),
+  borrowOwnBook: vi.fn(),
+  returnOwnBook: vi.fn(),
+  updateUserProfile: vi.fn(),
+}));
+
 vi.mock('../api/books', () => ({
   listBooks: vi.fn().mockResolvedValue({
     content: [],
@@ -203,7 +220,7 @@ describe('MembersPage', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Welcome back/ })).toBeInTheDocument();
     expect(searchMembers).not.toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: 'Add Member' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Members' })).not.toBeInTheDocument();

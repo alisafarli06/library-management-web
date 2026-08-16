@@ -75,8 +75,8 @@
 }
 
 .ui-card {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: var(--color-surface);
+  border: 1px solid var(--color-card-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   padding: var(--space-6);
@@ -104,9 +104,9 @@
 }
 
 .ui-badge--success {
-  background: #e6f4ec;
+  background: var(--color-success-soft);
   border-color: transparent;
-  color: #1f5c3f;
+  color: var(--color-success);
 }
 
 .ui-badge--danger {
@@ -122,17 +122,17 @@
 }
 
 .ui-badge--info {
-  background: #f3ebe0;
+  background: var(--color-primary-soft);
   border-color: transparent;
-  color: #2f4f73;
+  color: var(--color-primary);
 }
 
 /* Reserved for overdue loans when due-date tracking is available */
 .ui-badge--overdue,
 .ui-badge--danger.ui-badge--overdue {
-  background: #f8e8e4;
+  background: var(--color-danger-soft);
   border-color: transparent;
-  color: #9b3b2e;
+  color: var(--color-danger);
 }
 
 .ui-page-header {
@@ -157,7 +157,7 @@
 
 .ui-empty {
   border: 1px dashed var(--color-border-strong);
-  background: #ffffff;
+  background: var(--color-surface);
   border-radius: var(--radius-lg);
   padding: var(--space-8) var(--space-6);
 }

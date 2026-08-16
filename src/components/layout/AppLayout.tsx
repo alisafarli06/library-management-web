@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { getUserProfile } from '../../api/user';
+import { resolveDisplayName } from '../../auth/displayName';
 import { clearSession, getCurrentEmail, getCurrentRole } from '../../auth/session';
 import { AppHeader } from './AppHeader';
 import { AppSidebar } from './AppSidebar';
@@ -12,11 +14,34 @@ export function AppLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const email = getCurrentEmail();
   const role = getCurrentRole();
+  const [displayName, setDisplayName] = useState(() => resolveDisplayName(null, email));
   const title = PAGE_TITLES[location.pathname] ?? 'Library Management';
 
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProfile() {
+      try {
+        const profile = await getUserProfile();
+        if (!cancelled) {
+          setDisplayName(resolveDisplayName(profile.name, profile.email ?? email));
+        }
+      } catch {
+        if (!cancelled) {
+          setDisplayName(resolveDisplayName(null, email));
+        }
+      }
+    }
+
+    void loadProfile();
+    return () => {
+      cancelled = true;
+    };
+  }, [email, location.pathname]);
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
@@ -53,7 +78,7 @@ export function AppLayout() {
       <div className="app-frame__main">
         <AppHeader
           title={title}
-          email={email}
+          displayName={displayName}
           role={role}
           menuOpen={menuOpen}
           onToggleMenu={() => setMenuOpen((open) => !open)}

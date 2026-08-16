@@ -1,8 +1,13 @@
+import type { UpdateProfileRequest, UserProfileDto } from '../types/api';
+import { getJson, patchJson, postNoContent } from './http';
 import type { LoanDto, Page, PageQuery } from '../types/api';
-import { getJson, getText, postNoContent } from './http';
 
-export function getUserProfile(): Promise<string> {
-  return getText('/user/profile');
+export function getUserProfile(): Promise<UserProfileDto> {
+  return getJson<UserProfileDto>('/user/profile');
+}
+
+export function updateUserProfile(body: UpdateProfileRequest): Promise<UserProfileDto> {
+  return patchJson<UserProfileDto>('/user/profile', body);
 }
 
 export function borrowOwnBook(bookId: number): Promise<void> {

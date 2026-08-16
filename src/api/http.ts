@@ -104,7 +104,7 @@ function toApiError(status: number, rawBody: string): ApiError {
 type ParseAs = 'json' | 'text' | 'blob' | 'void';
 
 interface RequestOptions {
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   path: string;
   query?: object;
   json?: unknown;
@@ -262,6 +262,10 @@ export function postJson<T>(path: string, json?: unknown, skipAuth = false): Pro
 
 export function putJson<T>(path: string, json: unknown): Promise<T> {
   return request<T>({ method: 'PUT', path, json, parse: 'json' });
+}
+
+export function patchJson<T>(path: string, json: unknown): Promise<T> {
+  return request<T>({ method: 'PATCH', path, json, parse: 'json' });
 }
 
 export function deleteNoContent(path: string): Promise<void> {

@@ -5,6 +5,7 @@ import {
   BookOpen,
   Clock,
   LayoutDashboard,
+  Settings,
   UserPen,
   Users,
 } from 'lucide-react';
@@ -25,6 +26,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { to: '/authors', label: 'Authors', icon: UserPen },
   { to: '/members', label: 'Members', icon: Users, adminOnly: true },
   { to: '/analytics', label: 'Analytics', icon: BarChart3, adminOnly: true },
+  { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export const PAGE_TITLES: Record<string, string> = {

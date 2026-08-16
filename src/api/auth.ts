@@ -1,4 +1,10 @@
-import type { AuthenticationResponse, LoginRequest, RegisterRequest } from '../types/api';
+import type {
+  AuthenticationResponse,
+  ChangePasswordRequest,
+  LoginRequest,
+  MessageResponse,
+  RegisterRequest,
+} from '../types/api';
 import { saveAuthentication } from '../auth/session';
 import { postJson } from './http';
 
@@ -22,4 +28,8 @@ export async function refresh(refreshToken: string): Promise<AuthenticationRespo
   );
   saveAuthentication(response);
   return response;
+}
+
+export function changePassword(body: ChangePasswordRequest): Promise<MessageResponse> {
+  return postJson<MessageResponse>('/auth/change-password', body);
 }

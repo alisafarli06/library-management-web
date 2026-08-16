@@ -16,7 +16,7 @@
 
 .analytics-metric--active {
   border-color: rgba(180, 120, 40, 0.22);
-  background: linear-gradient(180deg, #fffaf2 0%, #ffffff 100%);
+  background: linear-gradient(180deg, var(--color-warning-soft) 0%, var(--color-surface) 100%);
 }
 
 .analytics-metric__label {
@@ -102,6 +102,8 @@
   border-collapse: collapse;
   font-family: var(--ui);
   font-size: 0.875rem;
+  color: var(--color-text);
+  background: var(--color-table-row);
 }
 
 .analytics-table th,
@@ -110,6 +112,18 @@
   border-bottom: 1px solid var(--color-border);
   text-align: left;
   white-space: nowrap;
+}
+
+.analytics-table tbody tr {
+  background: var(--color-table-row);
+}
+
+.analytics-table tbody tr:nth-child(even) {
+  background: var(--color-table-row-alt);
+}
+
+.analytics-table tbody tr:hover {
+  background: var(--color-table-row-hover);
 }
 
 .analytics-table th {
