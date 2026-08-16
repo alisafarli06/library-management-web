@@ -5,6 +5,7 @@ interface LoanConfirmDialogProps {
   title: string;
   children: ReactNode;
   confirmLabel: string;
+  submittingLabel?: string;
   submitting: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -14,6 +15,7 @@ export function LoanConfirmDialog({
   title,
   children,
   confirmLabel,
+  submittingLabel = 'Marking…',
   submitting,
   onConfirm,
   onCancel,
@@ -57,7 +59,7 @@ export function LoanConfirmDialog({
           {children}
           <div className="loan-form__actions">
             <Button type="button" autoFocus disabled={submitting} onClick={onConfirm}>
-              {submitting ? 'Returning…' : confirmLabel}
+              {submitting ? submittingLabel : confirmLabel}
             </Button>
             <Button type="button" variant="secondary" disabled={submitting} onClick={onCancel}>
               Cancel

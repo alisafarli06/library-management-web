@@ -39,7 +39,7 @@ export function Badge({
 }: {
   children: ReactNode;
   className?: string;
-  tone?: 'neutral' | 'success' | 'danger' | 'warning';
+  tone?: 'neutral' | 'success' | 'danger' | 'warning' | 'info';
 }) {
   return (
     <span className={['ui-badge', tone !== 'neutral' ? `ui-badge--${tone}` : '', className].filter(Boolean).join(' ')}>

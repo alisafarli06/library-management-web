@@ -17,6 +17,12 @@ export function getLoans(query: PageQuery = {}): Promise<Page<LoanDto>> {
   return getJson<Page<LoanDto>>('/loans', query);
 }
 
+export function searchLoans(
+  query: PageQuery & { q?: string; status?: string } = {},
+): Promise<Page<LoanDto>> {
+  return getJson<Page<LoanDto>>('/loans/search', query);
+}
+
 export function getAnalyticsSummary(): Promise<LoanAnalyticsSummaryDto> {
   return getJson<LoanAnalyticsSummaryDto>('/admin/analytics/summary');
 }

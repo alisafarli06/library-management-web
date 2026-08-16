@@ -206,10 +206,10 @@ describe('MyLoansPage', () => {
     const returnedRow = screen.getByText('Effective Java').closest('tr');
     expect(activeRow).not.toBeNull();
     expect(returnedRow).not.toBeNull();
-    expect(within(activeRow as HTMLElement).getByText('Borrowed')).toBeInTheDocument();
-    expect(within(activeRow as HTMLElement).getByRole('button', { name: 'Return Book' })).toBeInTheDocument();
+    expect(within(activeRow as HTMLElement).getByText('Currently Borrowed')).toBeInTheDocument();
+    expect(within(activeRow as HTMLElement).getByRole('button', { name: 'Mark as Returned' })).toBeInTheDocument();
     expect(within(returnedRow as HTMLElement).getByText('Returned')).toBeInTheDocument();
-    expect(within(returnedRow as HTMLElement).queryByRole('button', { name: 'Return Book' })).not.toBeInTheDocument();
+    expect(within(returnedRow as HTMLElement).queryByRole('button', { name: 'Mark as Returned' })).not.toBeInTheDocument();
     expect(screen.queryByText('Ada Lovelace')).not.toBeInTheDocument();
   });
 
@@ -228,7 +228,7 @@ describe('MyLoansPage', () => {
       expect(getUserLoans).toHaveBeenCalledWith({ page: 2, size: 20, sort: 'borrowedAt,asc' });
     });
 
-    await user.click(screen.getByRole('button', { name: /^Borrowed\s/ }));
+    await user.click(screen.getByRole('button', { name: 'Borrowed' }));
     await waitFor(() => {
       expect(getUserLoans).toHaveBeenLastCalledWith({ page: 0, size: 20, sort: 'borrowedAt,desc' });
     });
@@ -282,21 +282,21 @@ describe('MyLoansPage', () => {
     expect(getUserLoans).toHaveBeenCalledTimes(callsAfterLoad);
   });
 
-  it('shows Return Book only for active loans', async () => {
+  it('shows Mark as Returned only for active loans', async () => {
     renderMyLoansPage();
     const activeRow = (await screen.findByText('Clean Code')).closest('tr') as HTMLElement;
     const returnedRow = screen.getByText('Effective Java').closest('tr') as HTMLElement;
-    expect(within(activeRow).getByRole('button', { name: 'Return Book' })).toBeInTheDocument();
-    expect(within(returnedRow).queryByRole('button', { name: 'Return Book' })).not.toBeInTheDocument();
+    expect(within(activeRow).getByRole('button', { name: 'Mark as Returned' })).toBeInTheDocument();
+    expect(within(returnedRow).queryByRole('button', { name: 'Mark as Returned' })).not.toBeInTheDocument();
   });
 
-  it('opens a confirmation dialog when Return Book is clicked', async () => {
+  it('opens a confirmation dialog when Mark as Returned is clicked', async () => {
     const user = userEvent.setup();
     renderMyLoansPage();
-    await user.click(await screen.findByRole('button', { name: 'Return Book' }));
+    await user.click(await screen.findByRole('button', { name: 'Mark as Returned' }));
 
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByRole('heading', { name: 'Return book?' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('heading', { name: 'Mark as returned?' })).toBeInTheDocument();
     expect(within(dialog).getByText('Are you sure you want to return "Clean Code"?')).toBeInTheDocument();
     expect(returnOwnBook).not.toHaveBeenCalled();
   });
@@ -304,7 +304,7 @@ describe('MyLoansPage', () => {
   it('closes the dialog on Cancel without calling the return API', async () => {
     const user = userEvent.setup();
     renderMyLoansPage();
-    await user.click(await screen.findByRole('button', { name: 'Return Book' }));
+    await user.click(await screen.findByRole('button', { name: 'Mark as Returned' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -322,12 +322,12 @@ describe('MyLoansPage', () => {
     const user = userEvent.setup();
     renderMyLoansPage('/my-loans?page=1&size=20&sort=borrowedAt,asc');
 
-    await user.click(await screen.findByRole('button', { name: 'Return Book' }));
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Return Book' }));
+    await user.click(await screen.findByRole('button', { name: 'Mark as Returned' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Mark as Returned' }));
 
     expect(returnOwnBook).toHaveBeenCalledTimes(1);
     expect(returnOwnBook).toHaveBeenCalledWith(3);
-    expect(await screen.findByRole('status')).toHaveTextContent('Book returned successfully.');
+    expect(await screen.findByRole('status')).toHaveTextContent('Marked “Clean Code” as returned.');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await waitFor(() => {
       expect(getUserLoans).toHaveBeenCalledTimes(2);
@@ -336,7 +336,7 @@ describe('MyLoansPage', () => {
 
     const cleanCodeRow = screen.getByText('Clean Code').closest('tr') as HTMLElement;
     expect(within(cleanCodeRow).getByText('Returned')).toBeInTheDocument();
-    expect(within(cleanCodeRow).queryByRole('button', { name: 'Return Book' })).not.toBeInTheDocument();
+    expect(within(cleanCodeRow).queryByRole('button', { name: 'Mark as Returned' })).not.toBeInTheDocument();
   });
 
   it('shows the backend 404 message in the dialog and allows retry', async () => {
@@ -359,15 +359,15 @@ describe('MyLoansPage', () => {
     const user = userEvent.setup();
     renderMyLoansPage();
 
-    await user.click(await screen.findByRole('button', { name: 'Return Book' }));
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Return Book' }));
+    await user.click(await screen.findByRole('button', { name: 'Mark as Returned' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Mark as Returned' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Active loan not found');
     expect(screen.getByRole('dialog')).toBeInTheDocument();
 
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Return Book' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Mark as Returned' }));
     expect(returnOwnBook).toHaveBeenCalledTimes(2);
-    expect(await screen.findByRole('status')).toHaveTextContent('Book returned successfully.');
+    expect(await screen.findByRole('status')).toHaveTextContent('Marked “Clean Code” as returned.');
   });
 
   it('disables dialog actions while the return request is in flight', async () => {
@@ -381,11 +381,11 @@ describe('MyLoansPage', () => {
     const user = userEvent.setup();
     renderMyLoansPage();
 
-    await user.click(await screen.findByRole('button', { name: 'Return Book' }));
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Return Book' }));
+    await user.click(await screen.findByRole('button', { name: 'Mark as Returned' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Mark as Returned' }));
 
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByRole('button', { name: 'Returning…' })).toBeDisabled();
+    expect(within(dialog).getByRole('button', { name: 'Marking…' })).toBeDisabled();
     expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeDisabled();
     expect(returnOwnBook).toHaveBeenCalledTimes(1);
 

@@ -24,3 +24,7 @@ export function deleteMember(id: number): Promise<void> {
 export function borrowBook(memberId: number, bookId: number): Promise<void> {
   return postNoContent(`/members/${memberId}/books/${bookId}/borrow`);
 }
+
+export function returnBook(memberId: number, bookId: number): Promise<void> {
+  return postNoContent(`/members/${memberId}/books/${bookId}/return`);
+}

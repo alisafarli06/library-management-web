@@ -121,6 +121,20 @@
   color: var(--color-warning);
 }
 
+.ui-badge--info {
+  background: #f3ebe0;
+  border-color: transparent;
+  color: #2f4f73;
+}
+
+/* Reserved for overdue loans when due-date tracking is available */
+.ui-badge--overdue,
+.ui-badge--danger.ui-badge--overdue {
+  background: #f8e8e4;
+  border-color: transparent;
+  color: #9b3b2e;
+}
+
 .ui-page-header {
   margin-bottom: var(--space-6);
 }

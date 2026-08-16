@@ -8,8 +8,10 @@ import { LoanTable } from '../components/loans/LoanTable';
 import {
   isActiveLoan,
   loanListQueryToSearchParams,
+  loanMatchesSearch,
+  nextLoanSort,
   parseLoanListQuery,
-  toLoanApiQuery,
+  toLoanPageApiQuery,
   type LoanListQuery,
   type LoanStatusFilter,
 } from '../components/loans/loanListQuery';
@@ -31,6 +33,7 @@ export function MyLoansPage() {
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
   const [statusFilter, setStatusFilter] = useState<LoanStatusFilter>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [loanToReturn, setLoanToReturn] = useState<LoanDto | null>(null);
   const [returnSubmitting, setReturnSubmitting] = useState(false);
   const [returnError, setReturnError] = useState<string | null>(null);
@@ -44,7 +47,7 @@ export function MyLoansPage() {
       setLoading(true);
       setError(null);
       try {
-        const page = await getUserLoans(toLoanApiQuery(appliedQuery));
+        const page = await getUserLoans(toLoanPageApiQuery(appliedQuery));
         if (!cancelled) {
           setResult(page);
         }
@@ -66,6 +69,14 @@ export function MyLoansPage() {
     };
   }, [appliedQuery, reloadToken]);
 
+  useEffect(() => {
+    if (!successMessage) {
+      return;
+    }
+    const timeout = window.setTimeout(() => setSuccessMessage(null), 4500);
+    return () => window.clearTimeout(timeout);
+  }, [successMessage]);
+
   function replaceQuery(next: LoanListQuery) {
     setSearchParams(loanListQueryToSearchParams(next), { replace: true });
   }
@@ -86,9 +97,10 @@ export function MyLoansPage() {
     setReturnSubmitting(true);
     setReturnError(null);
     try {
+      const title = loanToReturn.bookTitle;
       await returnOwnBook(loanToReturn.bookId);
       setLoanToReturn(null);
-      setSuccessMessage('Book returned successfully.');
+      setSuccessMessage(`Marked “${title}” as returned.`);
       setReloadToken((value) => value + 1);
     } catch (submitError) {
       setReturnError(errorMessage(submitError, 'Unable to return the book.'));
@@ -99,17 +111,21 @@ export function MyLoansPage() {
   }
 
   const loans = result?.content ?? [];
-  const visibleLoans =
-    statusFilter === 'all'
-      ? loans
-      : loans.filter((loan) =>
-          statusFilter === 'borrowed' ? isActiveLoan(loan.returnedAt) : !isActiveLoan(loan.returnedAt),
-        );
+  const visibleLoans = loans.filter((loan) => {
+    if (statusFilter === 'borrowed' && !isActiveLoan(loan.returnedAt)) {
+      return false;
+    }
+    if (statusFilter === 'returned' && isActiveLoan(loan.returnedAt)) {
+      return false;
+    }
+    return loanMatchesSearch(loan, searchQuery);
+  });
   const totalPages = result?.totalPages ?? 0;
   const totalElements = result?.totalElements ?? 0;
   const currentPage = result?.number ?? appliedQuery.page;
   const hasLoadedEmptyHistory = !error && !loading && Boolean(result) && loans.length === 0;
   const hasFilteredEmpty = !error && !loading && loans.length > 0 && visibleLoans.length === 0;
+  const returningLoanId = returnSubmitting && loanToReturn ? loanToReturn.id : null;
 
   return (
     <div className="loan-page">
@@ -121,8 +137,11 @@ export function MyLoansPage() {
       </div>
 
       {successMessage ? (
-        <p className="loan-success" role="status">
+        <p className="loan-toast" role="status">
           {successMessage}
+          <button type="button" className="loan-toast__dismiss" aria-label="Dismiss" onClick={() => setSuccessMessage(null)}>
+            ×
+          </button>
         </p>
       ) : null}
 
@@ -145,37 +164,46 @@ export function MyLoansPage() {
 
       {!error && (loading || loans.length > 0) ? (
         <Card>
-          <div className="loan-filters" role="group" aria-label="Filter loans on this page">
-            {STATUS_OPTIONS.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className={statusFilter === option.id ? 'loan-filter is-active' : 'loan-filter'}
-                aria-pressed={statusFilter === option.id}
-                onClick={() => setStatusFilter(option.id)}
-              >
-                {option.label}
-              </button>
-            ))}
+          <div className="loan-toolbar">
+            <div className="loan-filters" role="group" aria-label="Filter loans on this page">
+              {STATUS_OPTIONS.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={statusFilter === option.id ? 'loan-filter is-active' : 'loan-filter'}
+                  aria-pressed={statusFilter === option.id}
+                  onClick={() => setStatusFilter(option.id)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <label className="loan-search">
+              <span className="loan-search__label">Search</span>
+              <input
+                type="search"
+                value={searchQuery}
+                placeholder="Search by book title"
+                autoComplete="off"
+                disabled={loading}
+                onChange={(event) => setSearchQuery(event.target.value)}
+              />
+            </label>
           </div>
-          <p className="loan-filters__hint">Status filters apply to the loans on this page only.</p>
+          <p className="loan-filters__hint">Filters and search apply to the loans on this page only.</p>
           {hasFilteredEmpty ? (
             <EmptyState
-              title="No loans on this page match the selected status."
-              body="Change the filter or go to another page. This does not search your full history."
+              title="No loans on this page match your filters."
+              body="Change the status filter or search, or go to another page. This does not search your full history."
             />
           ) : (
             <LoanTable
               loans={visibleLoans}
+              sortField={appliedQuery.sortField}
               sortDirection={appliedQuery.sortDirection}
               loading={loading}
-              onSortBorrowedAt={() =>
-                replaceQuery({
-                  ...appliedQuery,
-                  page: 0,
-                  sortDirection: appliedQuery.sortDirection === 'desc' ? 'asc' : 'desc',
-                })
-              }
+              returningLoanId={returningLoanId}
+              onSort={(field) => replaceQuery(nextLoanSort(appliedQuery, field))}
               onReturnBook={(loan) => {
                 setSuccessMessage(null);
                 setReturnError(null);
@@ -196,8 +224,9 @@ export function MyLoansPage() {
 
       {loanToReturn ? (
         <LoanConfirmDialog
-          title="Return book?"
-          confirmLabel="Return Book"
+          title="Mark as returned?"
+          confirmLabel="Mark as Returned"
+          submittingLabel="Marking…"
           submitting={returnSubmitting}
           onConfirm={() => {
             void confirmReturn();

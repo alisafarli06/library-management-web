@@ -15,13 +15,15 @@ const {
   hasValidAccessSession,
   getCurrentEmail,
   getAccessTokenExpiresAt,
-  getLoans,
+  searchLoans,
+  returnBook,
 } = vi.hoisted(() => ({
   getCurrentRole: vi.fn(),
   hasValidAccessSession: vi.fn(),
   getCurrentEmail: vi.fn(),
   getAccessTokenExpiresAt: vi.fn(),
-  getLoans: vi.fn(),
+  searchLoans: vi.fn(),
+  returnBook: vi.fn(),
 }));
 
 vi.mock('../auth/session', () => ({
@@ -33,7 +35,8 @@ vi.mock('../auth/session', () => ({
 }));
 
 vi.mock('../api/admin', () => ({
-  getLoans,
+  searchLoans,
+  getLoans: vi.fn(),
   getAdminDashboard: vi.fn(),
 }));
 
@@ -124,12 +127,14 @@ vi.mock('../api/members', () => ({
   deleteMember: vi.fn(),
   getMember: vi.fn(),
   borrowBook: vi.fn(),
+  returnBook,
 }));
 
 const activeLoan: LoanDto = {
   id: 1,
   memberId: 9,
   memberName: 'Ada Lovelace',
+  memberEmail: 'ada@library.com',
   bookId: 3,
   bookTitle: 'Clean Code',
   borrowedAt: '2026-08-16T10:30:00Z',
@@ -140,6 +145,7 @@ const returnedLoan: LoanDto = {
   id: 2,
   memberId: 11,
   memberName: 'Grace Hopper',
+  memberEmail: 'grace@library.com',
   bookId: 4,
   bookTitle: 'Effective Java',
   borrowedAt: '2026-07-01T09:00:00Z',
@@ -193,7 +199,8 @@ describe('AdminLoansPage', () => {
     hasValidAccessSession.mockReturnValue(true);
     getCurrentEmail.mockReturnValue('admin@library.com');
     getAccessTokenExpiresAt.mockReturnValue(null);
-    getLoans.mockResolvedValue(pageOf([activeLoan, returnedLoan]));
+    searchLoans.mockResolvedValue(pageOf([activeLoan, returnedLoan]));
+    returnBook.mockResolvedValue(undefined);
   });
 
   it('lets an ADMIN access /loans', async () => {
@@ -207,7 +214,7 @@ describe('AdminLoansPage', () => {
     getCurrentEmail.mockReturnValue('user@library.com');
     renderAppAt('/loans');
     expect(await screen.findByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
-    expect(getLoans).not.toHaveBeenCalled();
+    expect(searchLoans).not.toHaveBeenCalled();
     expect(screen.queryByRole('link', { name: 'Loans' })).not.toBeInTheDocument();
   });
 
@@ -216,7 +223,7 @@ describe('AdminLoansPage', () => {
     getCurrentRole.mockReturnValue(null);
     renderAppAt('/loans');
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
-    expect(getLoans).not.toHaveBeenCalled();
+    expect(searchLoans).not.toHaveBeenCalled();
   });
 
   it('does not show Loans in USER navigation and shows it for ADMIN', () => {
@@ -245,7 +252,7 @@ describe('AdminLoansPage', () => {
   it('loads loans with the default page, size, and sort', async () => {
     renderAdminLoansPage();
     await screen.findByText('Clean Code');
-    expect(getLoans).toHaveBeenCalledWith({ page: 0, size: 20, sort: 'borrowedAt,desc' });
+    expect(searchLoans).toHaveBeenCalledWith({ page: 0, size: 20, sort: 'borrowedAt,desc', status: 'all' });
   });
 
   it('renders book title, member name, status, and returned date', async () => {
@@ -255,47 +262,76 @@ describe('AdminLoansPage', () => {
     const returnedRow = screen.getByText('Effective Java').closest('tr') as HTMLElement;
 
     expect(within(activeRow).getByText('Ada Lovelace')).toBeInTheDocument();
-    expect(within(activeRow).getByText('Borrowed')).toBeInTheDocument();
+    expect(within(activeRow).getByText('Currently Borrowed')).toBeInTheDocument();
     expect(within(activeRow).getByText('—')).toBeInTheDocument();
+    expect(within(activeRow).getByRole('button', { name: 'Mark as Returned' })).toBeInTheDocument();
     expect(within(activeRow).queryByText(String(activeLoan.memberId))).not.toBeInTheDocument();
     expect(within(activeRow).queryByText(String(activeLoan.bookId))).not.toBeInTheDocument();
 
     expect(within(returnedRow).getByText('Grace Hopper')).toBeInTheDocument();
     expect(within(returnedRow).getByText('Returned')).toBeInTheDocument();
     expect(within(returnedRow).getByText(formatLoanDate(returnedLoan.returnedAt as string))).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Return Book' })).not.toBeInTheDocument();
+    expect(within(returnedRow).queryByRole('button', { name: 'Mark as Returned' })).not.toBeInTheDocument();
   });
 
   it('preserves URL pagination and sort, then paginates and re-sorts via the API', async () => {
-    getLoans.mockResolvedValue(
+    searchLoans.mockResolvedValue(
       pageOf([activeLoan], { totalPages: 3, totalElements: 41, last: false, number: 1 }),
     );
     const user = userEvent.setup();
     renderAdminLoansPage('/loans?page=1&size=20&sort=borrowedAt,asc');
 
     await screen.findByText('Clean Code');
-    expect(getLoans).toHaveBeenCalledWith({ page: 1, size: 20, sort: 'borrowedAt,asc' });
+    expect(searchLoans).toHaveBeenCalledWith({ page: 1, size: 20, sort: 'borrowedAt,asc', status: 'all' });
 
     await user.click(screen.getByRole('button', { name: 'Next' }));
     await waitFor(() => {
-      expect(getLoans).toHaveBeenCalledWith({ page: 2, size: 20, sort: 'borrowedAt,asc' });
+      expect(searchLoans).toHaveBeenCalledWith({ page: 2, size: 20, sort: 'borrowedAt,asc', status: 'all' });
     });
 
-    await user.click(screen.getByRole('button', { name: /^Borrowed\s/ }));
+    await user.click(screen.getByRole('button', { name: 'Borrowed' }));
     await waitFor(() => {
-      expect(getLoans).toHaveBeenLastCalledWith({ page: 0, size: 20, sort: 'borrowedAt,desc' });
+      expect(searchLoans).toHaveBeenLastCalledWith({ page: 0, size: 20, sort: 'borrowedAt,desc', status: 'all' });
+    });
+  });
+
+  it('disables Previous/Next correctly on single-page and multi-page results', async () => {
+    searchLoans.mockResolvedValue(pageOf([activeLoan, returnedLoan], { totalPages: 1, totalElements: 2 }));
+    const first = renderAdminLoansPage();
+    await screen.findByText('Clean Code');
+    expect(screen.getByText('Page 1 of 1 · 2 loans')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+    first.unmount();
+
+    searchLoans.mockResolvedValue(
+      pageOf([activeLoan], { totalPages: 3, totalElements: 41, last: false, number: 1 }),
+    );
+    renderAdminLoansPage('/loans?page=1&size=20&sort=borrowedAt,desc');
+    expect(await screen.findByText('Page 2 of 3 · 41 loans')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
+  });
+
+  it('sorts by member name via the API', async () => {
+    const user = userEvent.setup();
+    renderAdminLoansPage();
+    await screen.findByText('Clean Code');
+    await user.click(screen.getByRole('button', { name: 'Member' }));
+    await waitFor(() => {
+      expect(searchLoans).toHaveBeenLastCalledWith({ page: 0, size: 20, sort: 'member.name,asc', status: 'all' });
     });
   });
 
   it('shows the empty state when there is no loan history', async () => {
-    getLoans.mockResolvedValue(pageOf([]));
+    searchLoans.mockResolvedValue(pageOf([]));
     renderAdminLoansPage();
     expect(await screen.findByText('No loan history yet.')).toBeInTheDocument();
     expect(screen.getByText('Borrowing activity will appear here.')).toBeInTheDocument();
   });
 
   it('shows ApiError.message and retries', async () => {
-    getLoans
+    searchLoans
       .mockRejectedValueOnce(
         new ApiError({
           timestamp: '2026-08-16T00:00:00Z',
@@ -312,26 +348,152 @@ describe('AdminLoansPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Access denied');
     await user.click(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByText('Clean Code')).toBeInTheDocument();
-    expect(getLoans).toHaveBeenCalledTimes(2);
+    expect(searchLoans).toHaveBeenCalledTimes(2);
   });
 
-  it('filters the currently loaded page by status without extra API calls', async () => {
+  it('filters by status via the search API and resets to page 0', async () => {
     const user = userEvent.setup();
+    searchLoans
+      .mockResolvedValueOnce(pageOf([activeLoan, returnedLoan]))
+      .mockResolvedValueOnce(pageOf([activeLoan]))
+      .mockResolvedValueOnce(pageOf([returnedLoan]))
+      .mockResolvedValueOnce(pageOf([activeLoan, returnedLoan]));
     renderAdminLoansPage();
     await screen.findByText('Clean Code');
-    const callsAfterLoad = getLoans.mock.calls.length;
 
     await user.click(screen.getByRole('button', { name: 'Currently Borrowed' }));
-    expect(screen.getByText('Clean Code')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(searchLoans).toHaveBeenLastCalledWith({
+        page: 0,
+        size: 20,
+        sort: 'borrowedAt,desc',
+        status: 'borrowed',
+      });
+    });
+    expect(await screen.findByText('Clean Code')).toBeInTheDocument();
     expect(screen.queryByText('Effective Java')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Returned' }));
-    expect(screen.getByText('Effective Java')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(searchLoans).toHaveBeenLastCalledWith({
+        page: 0,
+        size: 20,
+        sort: 'borrowedAt,desc',
+        status: 'returned',
+      });
+    });
+    expect(await screen.findByText('Effective Java')).toBeInTheDocument();
     expect(screen.queryByText('Clean Code')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'All' }));
-    expect(screen.getByText('Clean Code')).toBeInTheDocument();
-    expect(screen.getByText('Effective Java')).toBeInTheDocument();
-    expect(getLoans).toHaveBeenCalledTimes(callsAfterLoad);
+    await waitFor(() => {
+      expect(searchLoans).toHaveBeenLastCalledWith({
+        page: 0,
+        size: 20,
+        sort: 'borrowedAt,desc',
+        status: 'all',
+      });
+    });
+  });
+
+  it('debounces search input and calls the search API with q', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    searchLoans
+      .mockResolvedValueOnce(pageOf([activeLoan, returnedLoan]))
+      .mockResolvedValueOnce(pageOf([returnedLoan]));
+    renderAdminLoansPage();
+    await screen.findByText('Clean Code');
+
+    await user.type(screen.getByLabelText('Search'), 'grace');
+    await vi.advanceTimersByTimeAsync(400);
+
+    await waitFor(() => {
+      expect(searchLoans).toHaveBeenLastCalledWith({
+        page: 0,
+        size: 20,
+        sort: 'borrowedAt,desc',
+        status: 'all',
+        q: 'grace',
+      });
+    });
+    expect(await screen.findByText('Effective Java')).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it('shows a full-history empty state when search returns no matches', async () => {
+    searchLoans.mockResolvedValue(pageOf([]));
+    renderAdminLoansPage('/loans?q=zzz&status=borrowed');
+    expect(await screen.findByText('No loans match your filters.')).toBeInTheDocument();
+    expect(screen.getByText('Try a different status filter or search term.')).toBeInTheDocument();
+    expect(screen.queryByText(/full history/i)).not.toBeInTheDocument();
+  });
+
+  it('lets an ADMIN mark an active loan as returned', async () => {
+    searchLoans
+      .mockResolvedValueOnce(pageOf([activeLoan, returnedLoan]))
+      .mockResolvedValueOnce(pageOf([{ ...activeLoan, returnedAt: '2026-08-16T12:00:00Z' }, returnedLoan]));
+    const user = userEvent.setup();
+    renderAdminLoansPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Mark as Returned' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Mark as returned?' })).toBeInTheDocument();
+    expect(within(dialog).getByText(/Ada Lovelace \(ada@library\.com\)/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Mark as Returned' }));
+
+    expect(returnBook).toHaveBeenCalledWith(9, 3);
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Marked “Clean Code” as returned for Ada Lovelace (ada@library.com).',
+    );
+    await waitFor(() => {
+      expect(searchLoans).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('shows email when member name is a generic Borrower placeholder', async () => {
+    searchLoans.mockResolvedValue(
+      pageOf([
+        {
+          ...activeLoan,
+          memberName: 'Borrower',
+          memberEmail: 'casey@library.com',
+        },
+      ]),
+    );
+    renderAdminLoansPage();
+
+    const row = (await screen.findByText('Clean Code')).closest('tr') as HTMLElement;
+    expect(within(row).getByText('casey@library.com')).toBeInTheDocument();
+    expect(within(row).queryByText('Borrower')).not.toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(within(row).getByRole('button', { name: 'Mark as Returned' }));
+    expect(within(screen.getByRole('dialog')).getByText(/casey@library\.com/)).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).queryByText(/\bBorrower\b/)).not.toBeInTheDocument();
+  });
+
+  it('shows Marking… on the dialog confirm button while the return request is in flight', async () => {
+    let resolveReturn: (() => void) | undefined;
+    returnBook.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveReturn = resolve;
+        }),
+    );
+    const user = userEvent.setup();
+    renderAdminLoansPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Mark as Returned' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Mark as Returned' }));
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('button', { name: 'Marking…' })).toBeDisabled();
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeDisabled();
+
+    resolveReturn?.();
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
   });
 });

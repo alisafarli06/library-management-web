@@ -58,6 +58,7 @@ export interface LoanDto {
   id: number;
   memberId: number;
   memberName: string;
+  memberEmail?: string | null;
   bookId: number;
   bookTitle: string;
   borrowedAt: string;
