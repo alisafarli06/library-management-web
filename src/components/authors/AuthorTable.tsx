@@ -1,39 +1,97 @@
+import { ArrowDown, ArrowUp, ChevronsUpDown, Pencil, Trash2 } from 'lucide-react';
 import type { AuthorDto } from '../../types/api';
-import type { SortDirection } from './authorListQuery';
+import type { AuthorSortField, SortDirection } from './authorListQuery';
 
 interface AuthorTableProps {
   authors: AuthorDto[];
+  sortField: AuthorSortField;
   sortDirection: SortDirection;
   loading: boolean;
   canManage: boolean;
-  onSortName: () => void;
+  onSort: (field: AuthorSortField) => void;
   onEdit: (author: AuthorDto) => void;
   onDelete: (author: AuthorDto) => void;
 }
 
+function SortHeader({
+  label,
+  field,
+  activeField,
+  direction,
+  onSort,
+}: {
+  label: string;
+  field: AuthorSortField;
+  activeField: AuthorSortField;
+  direction: SortDirection;
+  onSort: (field: AuthorSortField) => void;
+}) {
+  const active = activeField === field;
+  return (
+    <th aria-sort={active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      <button
+        type="button"
+        className={active ? 'book-table__sort is-active' : 'book-table__sort'}
+        onClick={() => onSort(field)}
+      >
+        <span>{label}</span>
+        <span
+          className={active ? 'book-table__sort-icon is-active' : 'book-table__sort-icon is-idle'}
+          aria-hidden="true"
+        >
+          {active ? (
+            direction === 'asc' ? (
+              <ArrowUp size={14} strokeWidth={2.5} />
+            ) : (
+              <ArrowDown size={14} strokeWidth={2.5} />
+            )
+          ) : (
+            <ChevronsUpDown size={14} strokeWidth={1.75} />
+          )}
+        </span>
+      </button>
+    </th>
+  );
+}
+
 export function AuthorTable({
   authors,
+  sortField,
   sortDirection,
   loading,
   canManage,
-  onSortName,
+  onSort,
   onEdit,
   onDelete,
 }: AuthorTableProps) {
-  const columnCount = canManage ? 3 : 2;
+  const columnCount = canManage ? 4 : 3;
 
   return (
     <div className="book-table-wrap">
       <table className="book-table">
         <thead>
           <tr>
-            <th>ID</th>
-            <th aria-sort={sortDirection === 'asc' ? 'ascending' : 'descending'}>
-              <button type="button" className="book-table__sort is-active" onClick={onSortName}>
-                Name
-                {sortDirection === 'asc' ? ' ↑' : ' ↓'}
-              </button>
-            </th>
+            <SortHeader
+              label="ID"
+              field="id"
+              activeField={sortField}
+              direction={sortDirection}
+              onSort={onSort}
+            />
+            <SortHeader
+              label="Name"
+              field="name"
+              activeField={sortField}
+              direction={sortDirection}
+              onSort={onSort}
+            />
+            <SortHeader
+              label="Books"
+              field="bookCount"
+              activeField={sortField}
+              direction={sortDirection}
+              onSort={onSort}
+            />
             {canManage ? <th>Actions</th> : null}
           </tr>
         </thead>
@@ -48,6 +106,7 @@ export function AuthorTable({
                 <tr key={author.id ?? author.name}>
                   <td>{author.id ?? '—'}</td>
                   <td>{author.name}</td>
+                  <td>{author.bookCount ?? 0}</td>
                   {canManage ? (
                     <td>
                       <div className="book-table__actions">
@@ -58,16 +117,16 @@ export function AuthorTable({
                           aria-label={`Edit ${author.name}`}
                           onClick={() => onEdit(author)}
                         >
-                          Edit
+                          <Pencil size={15} strokeWidth={1.75} aria-hidden="true" />
                         </button>
                         <button
                           type="button"
-                          className="book-table__action"
+                          className="book-table__action book-table__action--danger"
                           disabled={author.id == null}
                           aria-label={`Delete ${author.name}`}
                           onClick={() => onDelete(author)}
                         >
-                          Delete
+                          <Trash2 size={15} strokeWidth={1.75} aria-hidden="true" />
                         </button>
                       </div>
                     </td>

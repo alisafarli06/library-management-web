@@ -6,9 +6,9 @@ import { ApiError } from '../api/http';
 import type { AuthorDto, Page } from '../types/api';
 import { AuthorsPage } from './AuthorsPage';
 
-const { getCurrentRole, listAuthors, createAuthor, updateAuthor, deleteAuthor } = vi.hoisted(() => ({
+const { getCurrentRole, searchAuthors, createAuthor, updateAuthor, deleteAuthor } = vi.hoisted(() => ({
   getCurrentRole: vi.fn(),
-  listAuthors: vi.fn(),
+  searchAuthors: vi.fn(),
   createAuthor: vi.fn(),
   updateAuthor: vi.fn(),
   deleteAuthor: vi.fn(),
@@ -16,15 +16,16 @@ const { getCurrentRole, listAuthors, createAuthor, updateAuthor, deleteAuthor } 
 
 vi.mock('../auth/session', () => ({ getCurrentRole }));
 vi.mock('../api/authors', () => ({
-  listAuthors,
+  searchAuthors,
+  listAuthors: vi.fn(),
   createAuthor,
   updateAuthor,
   deleteAuthor,
   getAuthor: vi.fn(),
 }));
 
-const austen: AuthorDto = { id: 1, name: 'Jane Austen' };
-const tolstoy: AuthorDto = { id: 2, name: 'Leo Tolstoy' };
+const austen: AuthorDto = { id: 1, name: 'Jane Austen', bookCount: 2 };
+const tolstoy: AuthorDto = { id: 2, name: 'Leo Tolstoy', bookCount: 0 };
 
 function pageOf(content: AuthorDto[], overrides: Partial<Page<AuthorDto>> = {}): Page<AuthorDto> {
   return {
@@ -61,7 +62,7 @@ function renderAuthorsPage(path = '/authors') {
 describe('AuthorsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    listAuthors.mockResolvedValue(pageOf([austen, tolstoy]));
+    searchAuthors.mockResolvedValue(pageOf([austen, tolstoy]));
     createAuthor.mockResolvedValue(austen);
     updateAuthor.mockResolvedValue(austen);
     deleteAuthor.mockResolvedValue(undefined);
@@ -73,7 +74,7 @@ describe('AuthorsPage', () => {
 
     expect(await screen.findByText('Jane Austen')).toBeInTheDocument();
     expect(screen.getByText('Leo Tolstoy')).toBeInTheDocument();
-    expect(listAuthors).toHaveBeenCalledWith({ page: 0, size: 20, sort: 'name,asc' });
+    expect(searchAuthors).toHaveBeenCalledWith({ page: 0, size: 20, sort: 'name,asc' });
     expect(screen.queryByRole('button', { name: 'Add Author' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Edit Jane Austen' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Delete Jane Austen' })).not.toBeInTheDocument();
@@ -88,9 +89,19 @@ describe('AuthorsPage', () => {
     expect(screen.getByRole('button', { name: 'Delete Jane Austen' })).toBeInTheDocument();
   });
 
+  it('shows linked book counts', async () => {
+    getCurrentRole.mockReturnValue('USER');
+    renderAuthorsPage();
+
+    await screen.findByText('Jane Austen');
+    const rows = screen.getAllByRole('row');
+    expect(within(rows[1]).getByText('2')).toBeInTheDocument();
+    expect(within(rows[2]).getByText('0')).toBeInTheDocument();
+  });
+
   it('paginates with a server-side request', async () => {
     getCurrentRole.mockReturnValue('USER');
-    listAuthors.mockResolvedValue(
+    searchAuthors.mockResolvedValue(
       pageOf([austen], { totalPages: 2, totalElements: 21, last: false, numberOfElements: 1 }),
     );
     const user = userEvent.setup();
@@ -100,7 +111,7 @@ describe('AuthorsPage', () => {
     await user.click(screen.getByRole('button', { name: 'Next' }));
 
     await waitFor(() => {
-      expect(listAuthors).toHaveBeenLastCalledWith({ page: 1, size: 20, sort: 'name,asc' });
+      expect(searchAuthors).toHaveBeenLastCalledWith({ page: 1, size: 20, sort: 'name,asc' });
     });
   });
 
@@ -113,7 +124,60 @@ describe('AuthorsPage', () => {
     await user.click(screen.getByRole('button', { name: /Name/ }));
 
     await waitFor(() => {
-      expect(listAuthors).toHaveBeenLastCalledWith({ page: 0, size: 20, sort: 'name,desc' });
+      expect(searchAuthors).toHaveBeenLastCalledWith({ page: 0, size: 20, sort: 'name,desc' });
+    });
+  });
+
+  it('sorts by Books and ID via the API', async () => {
+    getCurrentRole.mockReturnValue('USER');
+    const user = userEvent.setup();
+    renderAuthorsPage();
+
+    await screen.findByText('Jane Austen');
+    await user.click(screen.getByRole('button', { name: /Books/ }));
+
+    await waitFor(() => {
+      expect(searchAuthors).toHaveBeenLastCalledWith({ page: 0, size: 20, sort: 'bookCount,asc' });
+    });
+
+    await user.click(screen.getByRole('button', { name: /ID/ }));
+
+    await waitFor(() => {
+      expect(searchAuthors).toHaveBeenLastCalledWith({ page: 0, size: 20, sort: 'id,asc' });
+    });
+  });
+
+  it('shows pagination controls below the table', async () => {
+    getCurrentRole.mockReturnValue('USER');
+    searchAuthors.mockResolvedValue(
+      pageOf([austen], { totalPages: 2, totalElements: 21, last: false, numberOfElements: 1 }),
+    );
+    renderAuthorsPage();
+
+    await screen.findByText('Jane Austen');
+    expect(screen.getByText(/Page 1 of 2/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
+  });
+
+  it('searches authors by name with debounce', async () => {
+    getCurrentRole.mockReturnValue('USER');
+    searchAuthors
+      .mockResolvedValueOnce(pageOf([austen, tolstoy]))
+      .mockResolvedValueOnce(pageOf([austen]));
+    const user = userEvent.setup();
+    renderAuthorsPage();
+
+    await screen.findByText('Jane Austen');
+    await user.type(screen.getByPlaceholderText('Search by author name'), 'Jane');
+
+    await waitFor(() => {
+      expect(searchAuthors).toHaveBeenLastCalledWith({
+        page: 0,
+        size: 20,
+        sort: 'name,asc',
+        q: 'Jane',
+      });
     });
   });
 
@@ -131,7 +195,20 @@ describe('AuthorsPage', () => {
       expect(createAuthor).toHaveBeenCalledWith({ name: 'Chinua Achebe' });
     });
     expect(await screen.findByText('Author created successfully.')).toBeInTheDocument();
-    expect(listAuthors).toHaveBeenCalledTimes(2);
+    expect(searchAuthors).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows validation when create is submitted empty', async () => {
+    getCurrentRole.mockReturnValue('ADMIN');
+    const user = userEvent.setup();
+    renderAuthorsPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Add Author' }));
+    const dialog = screen.getByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Create author' }));
+
+    expect(within(dialog).getByText('Name is required')).toBeInTheDocument();
+    expect(createAuthor).not.toHaveBeenCalled();
   });
 
   it('edits an author with PUT /authors/{id} and refetches', async () => {
@@ -150,7 +227,7 @@ describe('AuthorsPage', () => {
       expect(updateAuthor).toHaveBeenCalledWith(1, { name: 'Jane Austen Updated' });
     });
     expect(await screen.findByText('Author updated successfully.')).toBeInTheDocument();
-    expect(listAuthors).toHaveBeenCalledTimes(2);
+    expect(searchAuthors).toHaveBeenCalledTimes(2);
   });
 
   it('deletes an author with DELETE /authors/{id} and refetches', async () => {
@@ -160,14 +237,17 @@ describe('AuthorsPage', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Delete Jane Austen' }));
     const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Delete author?' })).toBeInTheDocument();
     expect(within(dialog).getByText('Jane Austen')).toBeInTheDocument();
+    expect(within(dialog).getByText(/2 linked books/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Deletion is blocked while books still reference/i)).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Delete author' }));
 
     await waitFor(() => {
       expect(deleteAuthor).toHaveBeenCalledWith(1);
     });
     expect(await screen.findByText('Author deleted successfully.')).toBeInTheDocument();
-    expect(listAuthors).toHaveBeenCalledTimes(2);
+    expect(searchAuthors).toHaveBeenCalledTimes(2);
   });
 
   it('shows the backend 409 message when delete is rejected', async () => {

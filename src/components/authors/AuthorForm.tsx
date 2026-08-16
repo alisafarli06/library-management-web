@@ -14,7 +14,7 @@ interface AuthorFormProps {
 function validateName(name: string): string | null {
   const trimmed = name.trim();
   if (!trimmed) {
-    return 'Name is required.';
+    return 'Name is required';
   }
   if (trimmed.length > 255) {
     return 'Name must be at most 255 characters.';

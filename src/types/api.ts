@@ -18,6 +18,7 @@ export interface BookDto {
 export interface AuthorDto {
   id?: number;
   name: string;
+  bookCount?: number;
 }
 
 export interface MemberDto {
