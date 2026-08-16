@@ -149,15 +149,69 @@
   gap: 0.35rem;
 }
 
+.book-table__title {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.book-table__meta {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+}
+
 .book-table__action {
-  border: 1px solid var(--color-border-strong);
+  border: 0;
   border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--ink);
+  background: transparent;
+  color: var(--color-primary);
   font: inherit;
   font-size: var(--font-size-small);
-  padding: 0.35rem 0.55rem;
+  font-weight: var(--font-weight-medium);
+  padding: 0.3rem 0.45rem;
   cursor: pointer;
+}
+
+.book-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(36rem, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  padding: var(--space-8);
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 14px;
+  box-shadow: var(--shadow-md);
+}
+
+.book-dialog h2 {
+  margin: 0 0 var(--space-6);
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.book-details__kicker {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.book-details__materials {
+  margin: var(--space-6) 0;
+  padding-top: var(--space-5);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.book-details__materials h3 {
+  margin: 0 0 var(--space-4);
+  font-family: var(--font-display);
+  font-size: var(--font-size-section-title);
+  font-weight: var(--font-weight-medium);
 }
 
 .book-table__action:disabled {
@@ -184,27 +238,6 @@
   inset: 0;
   border: 0;
   background: var(--color-overlay);
-}
-
-.book-dialog {
-  position: relative;
-  z-index: 1;
-  width: min(34rem, 100%);
-  max-height: calc(100vh - 2rem);
-  overflow: auto;
-  padding: var(--space-6);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-}
-
-.book-dialog h2 {
-  margin: 0 0 var(--space-4);
-  font-family: var(--font-display);
-  font-size: var(--font-size-section-title);
-  font-weight: var(--font-weight-medium);
-  letter-spacing: -0.02em;
 }
 
 .book-form {

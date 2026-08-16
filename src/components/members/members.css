@@ -106,13 +106,14 @@
 }
 
 .member-table__action {
-  border: 1px solid var(--color-border-strong);
+  border: 0;
   border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--ink);
+  background: transparent;
+  color: var(--color-primary);
   font: inherit;
   font-size: var(--font-size-small);
-  padding: 0.35rem 0.55rem;
+  font-weight: var(--font-weight-medium);
+  padding: 0.3rem 0.45rem;
   cursor: pointer;
 }
 
@@ -148,17 +149,17 @@
   width: min(34rem, 100%);
   max-height: calc(100vh - 2rem);
   overflow: auto;
-  padding: var(--space-6);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 14px;
   box-shadow: var(--shadow-md);
 }
 
 .member-dialog h2 {
   margin: 0 0 var(--space-4);
   font-family: var(--font-display);
-  font-size: var(--font-size-section-title);
+  font-size: 1.35rem;
   font-weight: var(--font-weight-medium);
   letter-spacing: -0.02em;
 }

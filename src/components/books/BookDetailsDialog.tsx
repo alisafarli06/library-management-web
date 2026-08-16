@@ -108,6 +108,7 @@ export function BookDetailsDialog({
         }}
       />
       <div className="book-dialog" role="dialog" aria-modal="true" aria-labelledby="book-details-heading">
+        <p className="book-details__kicker">Title</p>
         <h2 id="book-details-heading">{book.title}</h2>
         <dl className="book-details">
           <div>
@@ -125,22 +126,30 @@ export function BookDetailsDialog({
           <div>
             <dt>Availability</dt>
             <dd>
-              <Badge>{available ? 'Available' : 'Currently borrowed'}</Badge>
+              <Badge tone={available ? 'success' : 'warning'}>
+                {available ? 'Available' : 'Currently borrowed'}
+              </Badge>
             </dd>
-          </div>
-          <div>
-            <dt>Cover</dt>
-            <dd>{book.coverFileId != null ? 'Available' : 'Not attached'}</dd>
-          </div>
-          <div>
-            <dt>Preface</dt>
-            <dd>{book.prefaceFileId != null ? 'Available' : 'Not attached'}</dd>
           </div>
         </dl>
 
         {coverPreviewUrl ? (
           <img className="book-cover-preview" src={coverPreviewUrl} alt={`Cover of ${book.title}`} />
         ) : null}
+
+        <section className="book-details__materials" aria-labelledby="book-materials-heading">
+          <h3 id="book-materials-heading">Materials</h3>
+          <dl className="book-details">
+            <div>
+              <dt>Cover</dt>
+              <dd>{book.coverFileId != null ? book.coverFileName || 'Attached' : 'Not attached'}</dd>
+            </div>
+            <div>
+              <dt>Preface</dt>
+              <dd>{book.prefaceFileId != null ? book.prefaceFileName || 'Attached' : 'Not attached'}</dd>
+            </div>
+          </dl>
+        </section>
 
         {downloadError ? (
           <p className="book-alert" role="alert">

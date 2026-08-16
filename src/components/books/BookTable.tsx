@@ -91,14 +91,16 @@ export function BookTable({
                 return (
                   <tr key={book.id ?? `${book.isbn}-${book.title}`}>
                     <td>{book.id ?? '—'}</td>
-                    <td>{book.title}</td>
-                    <td>{book.isbn}</td>
-                    <td>{book.publishedYear ?? '—'}</td>
-                    <td>{book.authorId}</td>
+                    <td className="book-table__title">{book.title}</td>
+                    <td className="book-table__meta">{book.isbn}</td>
+                    <td className="book-table__meta">{book.publishedYear ?? '—'}</td>
+                    <td className="book-table__meta">{book.authorId}</td>
                     <td>
-                      <Badge>{available ? 'Available' : 'Currently borrowed'}</Badge>
+                      <Badge tone={available ? 'success' : 'warning'}>
+                        {available ? 'Available' : 'Currently borrowed'}
+                      </Badge>
                     </td>
-                    <td>{materialsLabel(book)}</td>
+                    <td className="book-table__meta">{materialsLabel(book)}</td>
                     <td>
                       <div className="book-table__actions">
                         <button

@@ -37,12 +37,12 @@ export function AdminLoanTable({ loans, sortDirection, loading, onSortBorrowedAt
             : loans.map((loan) => {
                 const active = isActiveLoan(loan.returnedAt);
                 return (
-                  <tr key={loan.id}>
-                    <td>{loan.bookTitle}</td>
+                  <tr key={loan.id} className={active ? undefined : 'loan-table__row--quiet'}>
+                    <td className="loan-table__title">{loan.bookTitle}</td>
                     <td>{loan.memberName}</td>
                     <td>{formatLoanDate(loan.borrowedAt)}</td>
                     <td>
-                      <Badge>{active ? 'Borrowed' : 'Returned'}</Badge>
+                      <Badge tone={active ? 'warning' : 'success'}>{active ? 'Borrowed' : 'Returned'}</Badge>
                     </td>
                     <td>{active || !loan.returnedAt ? '—' : formatLoanDate(loan.returnedAt)}</td>
                   </tr>

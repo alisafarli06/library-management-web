@@ -35,14 +35,12 @@ export function AppHeader({
         </div>
       </div>
       <div className="app-header__user">
-        <div className="app-header__identity">
-          <p className="app-header__email">{email ?? 'Unknown user'}</p>
-          {role ? (
-            <Badge className="app-header__role" tone="neutral">
-              {role}
-            </Badge>
-          ) : null}
-        </div>
+        <p className="app-header__email">{email ?? 'Unknown user'}</p>
+        {role ? (
+          <Badge className="app-header__role" tone="neutral">
+            {role}
+          </Badge>
+        ) : null}
         <Button variant="ghost" onClick={onLogout}>
           Logout
         </Button>

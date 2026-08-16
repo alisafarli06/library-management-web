@@ -8,6 +8,7 @@ import { MembersPage } from './pages/MembersPage';
 import { MyLoansPage } from './pages/MyLoansPage';
 import { AdminLoansPage } from './pages/AdminLoansPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { GuestOnly, RequireAdmin, RequireAuth } from './routes/guards';
 import { hasValidAccessSession } from './auth/session';
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="/books" element={<BooksPage />} />
           <Route path="/my-loans" element={<MyLoansPage />} />
           <Route path="/authors" element={<AuthorsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route element={<RequireAdmin />}>
             <Route path="/loans" element={<AdminLoansPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
