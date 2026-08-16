@@ -7,6 +7,7 @@ import {
   getMemberAnalytics,
 } from '../api/admin';
 import { errorMessage } from '../components/auth/formErrors';
+import { AnalyticsBarChart } from '../components/analytics/AnalyticsBarChart';
 import { AnalyticsPagination } from '../components/analytics/AnalyticsPagination';
 import { AnalyticsRankedTable } from '../components/analytics/AnalyticsRankedTable';
 import {
@@ -191,14 +192,31 @@ export function AnalyticsPage() {
           </div>
         ) : (
           <div className="analytics-metrics">
-            {SUMMARY_METRICS.map((metric) => (
-              <Card key={metric.key} className="analytics-metric">
-                <p className="analytics-metric__label">{metric.label}</p>
-                <p className={summaryLoading ? 'analytics-metric__value is-muted' : 'analytics-metric__value'}>
-                  {summaryLoading || !summary ? 'Loading…' : summary[metric.key]}
-                </p>
-              </Card>
-            ))}
+            {SUMMARY_METRICS.map((metric) => {
+              const isActiveLoans = metric.key === 'activeLoans';
+              return (
+                <Card
+                  key={metric.key}
+                  className={isActiveLoans ? 'analytics-metric analytics-metric--active' : 'analytics-metric'}
+                >
+                  <p className="analytics-metric__label">
+                    {isActiveLoans ? <span className="analytics-metric__dot" aria-hidden="true" /> : null}
+                    {metric.label}
+                  </p>
+                  <p
+                    className={[
+                      'analytics-metric__value',
+                      summaryLoading || !summary ? 'is-muted' : '',
+                      isActiveLoans && summary && !summaryLoading ? 'analytics-metric__value--active' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    {summaryLoading || !summary ? 'Loading…' : summary[metric.key]}
+                  </p>
+                </Card>
+              );
+            })}
           </div>
         )}
       </section>
@@ -209,6 +227,7 @@ export function AnalyticsPage() {
           title="Most Borrowed Books"
           nameHeader="Book"
           paginationLabel="Most borrowed books pagination"
+          visualization="chart"
           error={booksError}
           loading={booksLoading}
           result={books}
@@ -229,6 +248,7 @@ export function AnalyticsPage() {
           title="Most Borrowed Authors"
           nameHeader="Author"
           paginationLabel="Most borrowed authors pagination"
+          visualization="table"
           error={authorsError}
           loading={authorsLoading}
           result={authors}
@@ -249,6 +269,7 @@ export function AnalyticsPage() {
           title="Most Active Members"
           nameHeader="Member"
           paginationLabel="Most active members pagination"
+          visualization="chart"
           error={membersError}
           loading={membersLoading}
           result={members}
@@ -274,6 +295,7 @@ interface RankedSectionProps {
   title: string;
   nameHeader: string;
   paginationLabel: string;
+  visualization: 'chart' | 'table';
   error: string | null;
   loading: boolean;
   result: Page<{ borrowCount: number }> | null;
@@ -291,6 +313,7 @@ function RankedSection({
   title,
   nameHeader,
   paginationLabel,
+  visualization,
   error,
   loading,
   result,
@@ -303,9 +326,11 @@ function RankedSection({
   onNext,
 }: RankedSectionProps) {
   const isEmpty = !error && !loading && Boolean(result) && rows.length === 0;
+  const totalPages = result?.totalPages ?? 0;
+  const showPagination = !error && !isEmpty && totalPages > 1;
 
   return (
-    <section aria-labelledby={headingId}>
+    <section aria-labelledby={headingId} className="analytics-ranked-section">
       <Card>
         <h2 id={headingId} className="analytics-section__title">
           {title}
@@ -323,16 +348,27 @@ function RankedSection({
         {isEmpty ? <EmptyState title={emptyTitle} body={emptyBody} /> : null}
         {!error && (loading || rows.length > 0) ? (
           <>
-            <AnalyticsRankedTable nameHeader={nameHeader} rows={rows} loading={loading} />
-            <AnalyticsPagination
-              page={result?.number ?? page}
-              totalPages={result?.totalPages ?? 0}
-              totalElements={result?.totalElements ?? 0}
-              disabled={loading}
-              label={paginationLabel}
-              onPrevious={onPrevious}
-              onNext={onNext}
-            />
+            {loading && rows.length === 0 ? (
+              <p className="analytics-chart__loading">Loading analytics…</p>
+            ) : visualization === 'chart' ? (
+              <>
+                <AnalyticsBarChart rows={rows} label="Borrow count" />
+                <AnalyticsRankedTable nameHeader={nameHeader} rows={rows} loading={false} />
+              </>
+            ) : (
+              <AnalyticsRankedTable nameHeader={nameHeader} rows={rows} loading={loading} />
+            )}
+            {showPagination ? (
+              <AnalyticsPagination
+                page={result?.number ?? page}
+                totalPages={totalPages}
+                totalElements={result?.totalElements ?? 0}
+                disabled={loading}
+                label={paginationLabel}
+                onPrevious={onPrevious}
+                onNext={onNext}
+              />
+            ) : null}
           </>
         ) : null}
       </Card>

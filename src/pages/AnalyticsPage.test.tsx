@@ -122,6 +122,18 @@ vi.mock('../api/members', () => ({
   borrowBook: vi.fn(),
 }));
 
+vi.mock('recharts', async () => {
+  const actual = await vi.importActual<typeof import('recharts')>('recharts');
+  return {
+    ...actual,
+    ResponsiveContainer: ({
+      children,
+    }: {
+      children?: React.ReactNode;
+    }) => <div style={{ width: 640, height: 240 }}>{children}</div>,
+  };
+});
+
 function pageOf<T>(content: T[], overrides: Partial<Page<T>> = {}): Page<T> {
   return {
     content,
@@ -232,11 +244,22 @@ describe('AnalyticsPage', () => {
     expect(screen.getByText('18')).toBeInTheDocument();
     expect(screen.getAllByText('12')).toHaveLength(2);
     expect(screen.getByText('Total Loans')).toBeInTheDocument();
+    expect(screen.getByText('Active Loans')).toBeInTheDocument();
     expect(screen.getByText('Distinct Books')).toBeInTheDocument();
     expect(screen.getByText('Distinct Members')).toBeInTheDocument();
     expect(screen.getByText('Clean Code')).toBeInTheDocument();
     expect(screen.getByText('Robert C. Martin')).toBeInTheDocument();
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Most borrowed books pagination')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Most borrowed authors pagination')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Most active members pagination')).not.toBeInTheDocument();
+  });
+
+  it('hides pagination controls when a section has only one page', async () => {
+    renderAnalyticsPage();
+    await screen.findByText('Clean Code');
+    expect(screen.queryByRole('button', { name: 'Previous' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
   });
 
   it('paginates one ranked section without refetching the others', async () => {
