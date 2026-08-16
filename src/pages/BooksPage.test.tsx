@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -13,9 +13,14 @@ const {
   createBook,
   updateBook,
   deleteBook,
+  attachBookCover,
+  attachBookPreface,
+  removeBookCover,
+  removeBookPreface,
   listMembers,
   borrowBook,
   borrowOwnBook,
+  downloadFile,
 } = vi.hoisted(() => ({
   getCurrentRole: vi.fn(),
   listBooks: vi.fn(),
@@ -23,9 +28,14 @@ const {
   createBook: vi.fn(),
   updateBook: vi.fn(),
   deleteBook: vi.fn(),
+  attachBookCover: vi.fn(),
+  attachBookPreface: vi.fn(),
+  removeBookCover: vi.fn(),
+  removeBookPreface: vi.fn(),
   listMembers: vi.fn(),
   borrowBook: vi.fn(),
   borrowOwnBook: vi.fn(),
+  downloadFile: vi.fn(),
 }));
 
 vi.mock('../auth/session', () => ({ getCurrentRole }));
@@ -35,7 +45,12 @@ vi.mock('../api/books', () => ({
   createBook,
   updateBook,
   deleteBook,
+  attachBookCover,
+  attachBookPreface,
+  removeBookCover,
+  removeBookPreface,
 }));
+vi.mock('../api/files', () => ({ downloadFile, uploadFile: vi.fn() }));
 vi.mock('../api/members', () => ({ listMembers, borrowBook }));
 vi.mock('../api/user', () => ({ borrowOwnBook, getUserProfile: vi.fn() }));
 vi.mock('../api/authors', () => ({
@@ -89,6 +104,12 @@ const member: MemberDto = {
   email: 'ada@library.com',
 };
 
+const otherMember: MemberDto = {
+  id: 4,
+  name: 'Grace Hopper',
+  email: 'grace@library.com',
+};
+
 function pageOf(content: BookDto[]): Page<BookDto> {
   return {
     content,
@@ -127,13 +148,36 @@ describe('BooksPage borrow flow', () => {
     searchBooks.mockResolvedValue(pageOf([availableBook]));
     listMembers.mockResolvedValue({
       ...pageOf([]),
-      content: [member],
-      totalElements: 1,
-      numberOfElements: 1,
+      content: [member, otherMember],
+      totalElements: 2,
+      numberOfElements: 2,
       empty: false,
     });
     borrowBook.mockResolvedValue(undefined);
     borrowOwnBook.mockResolvedValue(undefined);
+    createBook.mockResolvedValue(availableBook);
+    updateBook.mockResolvedValue(availableBook);
+    downloadFile.mockResolvedValue(new Blob(['cover'], { type: 'image/jpeg' }));
+    attachBookCover.mockImplementation(async (_id: number, _file: File) => ({
+      ...availableBook,
+      coverFileId: 21,
+      coverFileName: 'cover.jpg',
+    }));
+    attachBookPreface.mockImplementation(async (_id: number, _file: File) => ({
+      ...availableBook,
+      prefaceFileId: 22,
+      prefaceFileName: 'intro.pdf',
+    }));
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      writable: true,
+      value: () => 'blob:cover',
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      writable: true,
+      value: () => undefined,
+    });
   });
 
   it('lets a USER borrow an available book without loading members or seeing catalogue management actions', async () => {
@@ -152,6 +196,7 @@ describe('BooksPage borrow flow', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('heading', { name: 'Borrow this book?' })).toBeInTheDocument();
     expect(within(dialog).getByText('Clean Code')).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText('Member')).not.toBeInTheDocument();
     expect(listMembers).not.toHaveBeenCalled();
 
     await user.click(within(dialog).getByRole('button', { name: 'Borrow' }));
@@ -227,12 +272,25 @@ describe('BooksPage borrow flow', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('heading', { name: 'Borrow book' })).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Member')).toBeInTheDocument();
     await waitFor(() => {
       expect(listMembers).toHaveBeenCalled();
     });
 
-    await user.selectOptions(within(dialog).getByLabelText('Member'), '3');
-    await user.click(within(dialog).getByRole('button', { name: 'Borrow' }));
+    const borrowButton = within(dialog).getByRole('button', { name: 'Borrow' });
+    expect(borrowButton).toBeDisabled();
+
+    await user.click(within(dialog).getByLabelText('Member'));
+    expect(await within(dialog).findByRole('option', { name: /Ada Lovelace/ })).toBeInTheDocument();
+    expect(within(dialog).getByText('ada@library.com')).toBeInTheDocument();
+    expect(within(dialog).getByRole('option', { name: /Grace Hopper/ })).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('option', { name: /Ada Lovelace/ }));
+    expect(within(dialog).getByTestId('selected-member')).toHaveTextContent('Ada Lovelace');
+    expect(within(dialog).getByTestId('selected-member')).toHaveTextContent('ada@library.com');
+    expect(borrowButton).toBeEnabled();
+
+    await user.click(borrowButton);
 
     await waitFor(() => {
       expect(borrowBook).toHaveBeenCalledWith(3, 9);
@@ -240,6 +298,65 @@ describe('BooksPage borrow flow', () => {
     expect(borrowOwnBook).not.toHaveBeenCalled();
     expect(await screen.findByText('Book borrowed successfully.')).toBeInTheDocument();
     expect(listBooks).toHaveBeenCalledTimes(2);
+  });
+
+  it('filters loaded members locally by name and email without extra listMembers calls', async () => {
+    getCurrentRole.mockReturnValue('ADMIN');
+    const user = userEvent.setup();
+    renderBooksPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Borrow' }));
+    const dialog = await screen.findByRole('dialog');
+    const search = await within(dialog).findByLabelText('Member');
+    await waitFor(() => {
+      expect(listMembers).toHaveBeenCalled();
+    });
+    const listCalls = listMembers.mock.calls.length;
+
+    await user.click(search);
+    await user.type(search, 'grace');
+    expect(within(dialog).queryByRole('option', { name: /Ada Lovelace/ })).not.toBeInTheDocument();
+    expect(within(dialog).getByRole('option', { name: /Grace Hopper/ })).toBeInTheDocument();
+    expect(within(dialog).getByText('grace@library.com')).toBeInTheDocument();
+
+    await user.clear(search);
+    await user.type(search, 'ADA@LIBRARY');
+    expect(within(dialog).getByRole('option', { name: /Ada Lovelace/ })).toBeInTheDocument();
+    expect(within(dialog).queryByRole('option', { name: /Grace Hopper/ })).not.toBeInTheDocument();
+
+    await user.clear(search);
+    await user.type(search, 'zzz-not-a-member');
+    expect(within(dialog).getByText('No members found')).toBeInTheDocument();
+
+    await user.clear(search);
+    expect(within(dialog).getByRole('option', { name: /Ada Lovelace/ })).toBeInTheDocument();
+    expect(within(dialog).getByRole('option', { name: /Grace Hopper/ })).toBeInTheDocument();
+    expect(listMembers).toHaveBeenCalledTimes(listCalls);
+  });
+
+  it('shows the backend 409 message when an ADMIN borrow is rejected', async () => {
+    getCurrentRole.mockReturnValue('ADMIN');
+    borrowBook.mockRejectedValue(
+      new ApiError({
+        timestamp: '2026-08-15T00:00:00Z',
+        status: 409,
+        error: 'Conflict',
+        message: 'Member already borrowed this book',
+        fieldErrors: null,
+      }),
+    );
+    const user = userEvent.setup();
+    renderBooksPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Borrow' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByLabelText('Member'));
+    await user.click(await within(dialog).findByRole('option', { name: /Ada Lovelace/ }));
+    await user.click(within(dialog).getByRole('button', { name: 'Borrow' }));
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Member already borrowed this book');
+    expect(screen.queryByText('Book borrowed successfully.')).not.toBeInTheDocument();
+    expect(listBooks).toHaveBeenCalledTimes(1);
   });
 
   it('keeps Edit and Delete for ADMIN when a book is unavailable', async () => {
@@ -283,5 +400,90 @@ describe('BooksPage borrow flow', () => {
     await waitFor(() => {
       expect(searchBooks).toHaveBeenLastCalledWith(expect.objectContaining({ available: false }));
     });
+  });
+
+  it('lets a USER download attached files from details and does not show upload controls', async () => {
+    getCurrentRole.mockReturnValue('USER');
+    listBooks.mockResolvedValue(
+      pageOf([
+        {
+          ...availableBook,
+          coverFileId: 21,
+          coverFileName: 'cover.jpg',
+          prefaceFileId: 22,
+          prefaceFileName: 'intro.pdf',
+        },
+      ]),
+    );
+    const user = userEvent.setup();
+    renderBooksPage();
+
+    expect(await screen.findByText('Cover · Preface')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Cover image/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Details' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(await within(dialog).findByAltText('Cover of Clean Code')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('Available').length).toBeGreaterThan(0);
+    expect(within(dialog).queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Download Cover' }));
+    await waitFor(() => {
+      expect(downloadFile).toHaveBeenCalledWith(21);
+    });
+    await user.click(within(dialog).getByRole('button', { name: 'Download Preface' }));
+    await waitFor(() => {
+      expect(downloadFile).toHaveBeenCalledWith(22);
+    });
+    expect(screen.queryByRole('link', { name: /\/api\/files/ })).not.toBeInTheDocument();
+  });
+
+  it('lets an ADMIN attach a cover from the book form', async () => {
+    getCurrentRole.mockReturnValue('ADMIN');
+    createBook.mockResolvedValue(availableBook);
+    const user = userEvent.setup();
+    renderBooksPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Add Book' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByLabelText(/Cover image/)).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/Preface/)).toBeInTheDocument();
+
+    await user.type(within(dialog).getByLabelText('Title'), 'Clean Code');
+    await user.type(within(dialog).getByLabelText('ISBN'), '9780132350884');
+    await user.selectOptions(within(dialog).getByLabelText('Author'), '1');
+    const coverInput = within(dialog).getByLabelText(/Cover image/) as HTMLInputElement;
+    const cover = new File([new Uint8Array([0xff, 0xd8, 0xff])], 'cover.jpg', { type: 'image/jpeg' });
+    await user.upload(coverInput, cover);
+    await user.click(within(dialog).getByRole('button', { name: 'Create book' }));
+
+    await waitFor(() => {
+      expect(createBook).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(attachBookCover).toHaveBeenCalledWith(9, cover);
+    });
+    expect(attachBookPreface).not.toHaveBeenCalled();
+  });
+
+  it('validates an invalid cover type before uploading', async () => {
+    getCurrentRole.mockReturnValue('ADMIN');
+    const user = userEvent.setup();
+    renderBooksPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Add Book' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Title'), 'Clean Code');
+    await user.type(within(dialog).getByLabelText('ISBN'), '9780132350884');
+    await user.selectOptions(within(dialog).getByLabelText('Author'), '1');
+    const coverInput = within(dialog).getByLabelText(/Cover image/) as HTMLInputElement;
+    fireEvent.change(coverInput, {
+      target: { files: [new File(['%PDF'], 'intro.pdf', { type: 'application/pdf' })] },
+    });
+    await user.click(within(dialog).getByRole('button', { name: 'Create book' }));
+
+    expect(await within(dialog).findByText('Cover must be a JPEG or PNG image.')).toBeInTheDocument();
+    expect(createBook).not.toHaveBeenCalled();
+    expect(attachBookCover).not.toHaveBeenCalled();
   });
 });

@@ -24,11 +24,6 @@ const AREAS = [
     title: 'Members',
     copy: 'Keep borrower records and circulation actions in one place.',
   },
-  {
-    to: '/files',
-    title: 'Files',
-    copy: 'Upload and download staff documents through the file API.',
-  },
 ] as const;
 
 export function DashboardPage() {
@@ -77,13 +72,6 @@ export function DashboardPage() {
               </Button>
             </Card>
           ) : null}
-          <Card>
-            <h3>Manage Files</h3>
-            <p>Open uploads and downloads.</p>
-            <Button to="/files" variant="secondary">
-              Go to Files
-            </Button>
-          </Card>
         </div>
       </section>
 

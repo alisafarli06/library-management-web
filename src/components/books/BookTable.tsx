@@ -9,6 +9,7 @@ interface BookTableProps {
   loading: boolean;
   canManage: boolean;
   onSort: (field: BookSortField) => void;
+  onDetails: (book: BookDto) => void;
   onEdit: (book: BookDto) => void;
   onDelete: (book: BookDto) => void;
   onBorrow: (book: BookDto) => void;
@@ -25,6 +26,21 @@ function isAvailable(book: BookDto): boolean {
   return book.available === true;
 }
 
+function materialsLabel(book: BookDto): string {
+  const cover = book.coverFileId != null;
+  const preface = book.prefaceFileId != null;
+  if (cover && preface) {
+    return 'Cover · Preface';
+  }
+  if (cover) {
+    return 'Cover';
+  }
+  if (preface) {
+    return 'Preface';
+  }
+  return 'None';
+}
+
 export function BookTable({
   books,
   sortField,
@@ -32,6 +48,7 @@ export function BookTable({
   loading,
   canManage,
   onSort,
+  onDetails,
   onEdit,
   onDelete,
   onBorrow,
@@ -58,6 +75,7 @@ export function BookTable({
             })}
             <th>Author ID</th>
             <th>Availability</th>
+            <th>Materials</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -65,7 +83,7 @@ export function BookTable({
           {loading && books.length === 0
             ? Array.from({ length: 5 }, (_, index) => (
                 <tr key={`skeleton-${index}`} className="book-table__skeleton">
-                  <td colSpan={7}>Loading books…</td>
+                  <td colSpan={8}>Loading books…</td>
                 </tr>
               ))
             : books.map((book) => {
@@ -80,8 +98,17 @@ export function BookTable({
                     <td>
                       <Badge>{available ? 'Available' : 'Currently borrowed'}</Badge>
                     </td>
+                    <td>{materialsLabel(book)}</td>
                     <td>
                       <div className="book-table__actions">
+                        <button
+                          type="button"
+                          className="book-table__action"
+                          disabled={book.id == null}
+                          onClick={() => onDetails(book)}
+                        >
+                          Details
+                        </button>
                         <button
                           type="button"
                           className="book-table__action"

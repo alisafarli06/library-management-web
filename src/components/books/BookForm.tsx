@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { listAuthors } from '../../api/authors';
 import { errorMessage, fieldErrorsFrom } from '../auth/formErrors';
+import { validateCoverFile, validatePrefaceFile } from '../files/fileUtils';
 import { Button } from '../ui/Primitives';
 import type { AuthorDto, BookDto } from '../../types/api';
 
@@ -11,11 +12,19 @@ export interface BookFormValues {
   authorId: string;
 }
 
+export interface BookAttachmentDraft {
+  coverFile: File | null;
+  prefaceFile: File | null;
+  removeCover: boolean;
+  removePreface: boolean;
+}
+
 interface BookFormProps {
   mode: 'create' | 'edit';
   initialValues: BookFormValues;
+  existingBook?: BookDto | null;
   submitting: boolean;
-  onSubmit: (book: BookDto) => Promise<void>;
+  onSubmit: (book: BookDto, attachments: BookAttachmentDraft) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -89,11 +98,20 @@ function toBookDto(values: BookFormValues): BookDto {
   };
 }
 
-export function BookForm({ mode, initialValues, submitting, onSubmit, onCancel }: BookFormProps) {
+export function BookForm({
+  mode,
+  initialValues,
+  existingBook = null,
+  submitting,
+  onSubmit,
+  onCancel,
+}: BookFormProps) {
   const titleId = useId();
   const isbnId = useId();
   const yearId = useId();
   const authorId = useId();
+  const coverId = useId();
+  const prefaceId = useId();
   const titleRef = useRef<HTMLInputElement>(null);
   const [values, setValues] = useState<BookFormValues>(initialValues);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -102,6 +120,10 @@ export function BookForm({ mode, initialValues, submitting, onSubmit, onCancel }
   const [authorsLoading, setAuthorsLoading] = useState(true);
   const [authorsError, setAuthorsError] = useState<string | null>(null);
   const [authorReload, setAuthorReload] = useState(0);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [prefaceFile, setPrefaceFile] = useState<File | null>(null);
+  const [removeCover, setRemoveCover] = useState(false);
+  const [removePreface, setRemovePreface] = useState(false);
 
   useEffect(() => {
     titleRef.current?.focus();
@@ -158,6 +180,14 @@ export function BookForm({ mode, initialValues, submitting, onSubmit, onCancel }
     }
 
     const nextErrors = validate(values);
+    const coverError = validateCoverFile(coverFile);
+    const prefaceError = validatePrefaceFile(prefaceFile);
+    if (coverError) {
+      nextErrors.cover = coverError;
+    }
+    if (prefaceError) {
+      nextErrors.preface = prefaceError;
+    }
     if (Object.keys(nextErrors).length > 0) {
       setFieldErrors(nextErrors);
       setFormError(null);
@@ -168,7 +198,12 @@ export function BookForm({ mode, initialValues, submitting, onSubmit, onCancel }
     setFormError(null);
 
     try {
-      await onSubmit(toBookDto(values));
+      await onSubmit(toBookDto(values), {
+        coverFile: removeCover ? null : coverFile,
+        prefaceFile: removePreface ? null : prefaceFile,
+        removeCover,
+        removePreface,
+      });
     } catch (error) {
       const backendFields = fieldErrorsFrom(error);
       const mapped: Record<string, string> = {};
@@ -292,6 +327,70 @@ export function BookForm({ mode, initialValues, submitting, onSubmit, onCancel }
             </select>
             {fieldErrors.authorId ? <span className="book-form__error">{fieldErrors.authorId}</span> : null}
           </label>
+
+          <label className="book-form__field" htmlFor={coverId}>
+            Cover image (optional JPEG or PNG)
+            <input
+              id={coverId}
+              type="file"
+              accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+              disabled={submitting || removeCover}
+              aria-invalid={fieldErrors.cover ? true : undefined}
+              onChange={(event) => setCoverFile(event.target.files?.[0] ?? null)}
+            />
+            {existingBook?.coverFileName && !removeCover ? (
+              <span className="book-form__hint">Current: {existingBook.coverFileName}</span>
+            ) : null}
+            {fieldErrors.cover ? <span className="book-form__error">{fieldErrors.cover}</span> : null}
+          </label>
+          {existingBook?.coverFileId != null ? (
+            <label className="book-form__check">
+              <input
+                type="checkbox"
+                checked={removeCover}
+                disabled={submitting}
+                onChange={(event) => {
+                  setRemoveCover(event.target.checked);
+                  if (event.target.checked) {
+                    setCoverFile(null);
+                  }
+                }}
+              />
+              Remove existing cover
+            </label>
+          ) : null}
+
+          <label className="book-form__field" htmlFor={prefaceId}>
+            Preface (optional PDF)
+            <input
+              id={prefaceId}
+              type="file"
+              accept="application/pdf,.pdf"
+              disabled={submitting || removePreface}
+              aria-invalid={fieldErrors.preface ? true : undefined}
+              onChange={(event) => setPrefaceFile(event.target.files?.[0] ?? null)}
+            />
+            {existingBook?.prefaceFileName && !removePreface ? (
+              <span className="book-form__hint">Current: {existingBook.prefaceFileName}</span>
+            ) : null}
+            {fieldErrors.preface ? <span className="book-form__error">{fieldErrors.preface}</span> : null}
+          </label>
+          {existingBook?.prefaceFileId != null ? (
+            <label className="book-form__check">
+              <input
+                type="checkbox"
+                checked={removePreface}
+                disabled={submitting}
+                onChange={(event) => {
+                  setRemovePreface(event.target.checked);
+                  if (event.target.checked) {
+                    setPrefaceFile(null);
+                  }
+                }}
+              />
+              Remove existing preface
+            </label>
+          ) : null}
 
           {authorsLoading ? <p className="book-form__hint">Loading authors…</p> : null}
           {authorsError ? (

@@ -48,6 +48,34 @@ export function validateSelectedFile(file: File | null): string | null {
   return null;
 }
 
+export function validateCoverFile(file: File | null): string | null {
+  if (!file) {
+    return null;
+  }
+  const type = resolveFileType(file);
+  if (type !== 'image/jpeg' && type !== 'image/png') {
+    return 'Cover must be a JPEG or PNG image.';
+  }
+  if (file.size > FILE_MAX_SIZE_BYTES) {
+    return 'Cover must be 10 MiB or smaller.';
+  }
+  return null;
+}
+
+export function validatePrefaceFile(file: File | null): string | null {
+  if (!file) {
+    return null;
+  }
+  const type = resolveFileType(file);
+  if (type !== 'application/pdf') {
+    return 'Preface must be a PDF document.';
+  }
+  if (file.size > FILE_MAX_SIZE_BYTES) {
+    return 'Preface must be 10 MiB or smaller.';
+  }
+  return null;
+}
+
 export async function saveBlobDownload(blob: Blob, filename: string): Promise<void> {
   const objectUrl = URL.createObjectURL(blob);
   try {

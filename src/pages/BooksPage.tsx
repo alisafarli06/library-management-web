@@ -1,17 +1,29 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { createBook, deleteBook, listBooks, searchBooks, updateBook } from '../api/books';
+import {
+  attachBookCover,
+  attachBookPreface,
+  createBook,
+  deleteBook,
+  listBooks,
+  removeBookCover,
+  removeBookPreface,
+  searchBooks,
+  updateBook,
+} from '../api/books';
 import { borrowBook } from '../api/members';
 import { borrowOwnBook } from '../api/user';
 import { getCurrentRole } from '../auth/session';
 import { errorMessage } from '../components/auth/formErrors';
 import { BookBorrowDialog } from '../components/books/BookBorrowDialog';
 import { BookConfirmDialog } from '../components/books/BookConfirmDialog';
+import { BookDetailsDialog } from '../components/books/BookDetailsDialog';
 import { BookFilters } from '../components/books/BookFilters';
 import {
   BookForm,
   EMPTY_BOOK_FORM,
   bookToFormValues,
+  type BookAttachmentDraft,
   type BookFormValues,
 } from '../components/books/BookForm';
 import { BookPagination } from '../components/books/BookPagination';
@@ -53,13 +65,17 @@ export function BooksPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
-  const [editor, setEditor] = useState<{ mode: 'create' | 'edit'; bookId?: number; values: BookFormValues } | null>(
-    null,
-  );
+  const [editor, setEditor] = useState<{
+    mode: 'create' | 'edit';
+    bookId?: number;
+    values: BookFormValues;
+    book?: BookDto;
+  } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [borrowBookTarget, setBorrowBookTarget] = useState<BookDto | null>(null);
+  const [detailsBook, setDetailsBook] = useState<BookDto | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<BookDto | null>(null);
   const canManageBooks = getCurrentRole() === 'ADMIN';
 
@@ -132,21 +148,37 @@ export function BooksPage() {
     }
   }
 
-  async function handleSave(book: BookDto) {
+  async function handleSave(book: BookDto, attachments: BookAttachmentDraft) {
     if (!canManageBooks || !editor || submitting) {
       return;
     }
     setSubmitting(true);
     try {
+      let saved: BookDto;
       if (editor.mode === 'create') {
-        await createBook(book);
+        saved = await createBook(book);
         setSuccessMessage('Book created successfully.');
       } else if (editor.bookId != null) {
-        await updateBook(editor.bookId, book);
+        saved = await updateBook(editor.bookId, book);
         setSuccessMessage('Book updated successfully.');
       } else {
         throw new Error('Unable to save the book.');
       }
+      if (saved.id == null) {
+        throw new Error('Unable to save the book.');
+      }
+      const bookId = saved.id;
+      if (attachments.removeCover) {
+        saved = await removeBookCover(bookId);
+      } else if (attachments.coverFile) {
+        saved = await attachBookCover(bookId, attachments.coverFile);
+      }
+      if (attachments.removePreface) {
+        saved = await removeBookPreface(bookId);
+      } else if (attachments.prefaceFile) {
+        saved = await attachBookPreface(bookId, attachments.prefaceFile);
+      }
+      void saved;
       setEditor(null);
       setReloadToken((value) => value + 1);
     } finally {
@@ -289,13 +321,21 @@ export function BooksPage() {
             loading={loading}
             canManage={canManageBooks}
             onSort={changeSort}
+            onDetails={(book) => {
+              if (book.id == null) {
+                return;
+              }
+              setSuccessMessage(null);
+              setActionError(null);
+              setDetailsBook(book);
+            }}
             onEdit={(book) => {
               if (!canManageBooks || book.id == null) {
                 return;
               }
               setSuccessMessage(null);
               setActionError(null);
-              setEditor({ mode: 'edit', bookId: book.id, values: bookToFormValues(book) });
+              setEditor({ mode: 'edit', bookId: book.id, values: bookToFormValues(book), book });
             }}
             onDelete={(book) => {
               if (!canManageBooks || book.id == null) {
@@ -329,9 +369,49 @@ export function BooksPage() {
         <BookForm
           mode={editor.mode}
           initialValues={editor.values}
+          existingBook={editor.book ?? null}
           submitting={submitting}
           onSubmit={handleSave}
           onCancel={closeEditor}
+        />
+      ) : null}
+
+      {detailsBook ? (
+        <BookDetailsDialog
+          book={detailsBook}
+          canManage={canManageBooks}
+          submitting={submitting}
+          onBorrow={() => {
+            if (detailsBook.available !== true) {
+              return;
+            }
+            setDetailsBook(null);
+            setBorrowBookTarget(detailsBook);
+          }}
+          onEdit={() => {
+            if (!canManageBooks || detailsBook.id == null) {
+              return;
+            }
+            setDetailsBook(null);
+            setEditor({
+              mode: 'edit',
+              bookId: detailsBook.id,
+              values: bookToFormValues(detailsBook),
+              book: detailsBook,
+            });
+          }}
+          onDelete={() => {
+            if (!canManageBooks) {
+              return;
+            }
+            setDetailsBook(null);
+            setDeleteTarget(detailsBook);
+          }}
+          onClose={() => {
+            if (!submitting) {
+              setDetailsBook(null);
+            }
+          }}
         />
       ) : null}
 

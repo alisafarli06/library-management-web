@@ -9,6 +9,10 @@ export interface BookDto {
   publishedYear?: number | null;
   authorId: number;
   available?: boolean;
+  coverFileId?: number | null;
+  coverFileName?: string | null;
+  prefaceFileId?: number | null;
+  prefaceFileName?: string | null;
 }
 
 export interface AuthorDto {

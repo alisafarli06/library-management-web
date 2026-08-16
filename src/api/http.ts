@@ -268,6 +268,10 @@ export function deleteNoContent(path: string): Promise<void> {
   return request<void>({ method: 'DELETE', path, parse: 'void' });
 }
 
+export function deleteJson<T>(path: string): Promise<T> {
+  return request<T>({ method: 'DELETE', path, parse: 'json' });
+}
+
 export function postNoContent(path: string): Promise<void> {
   return request<void>({ method: 'POST', path, parse: 'void' });
 }

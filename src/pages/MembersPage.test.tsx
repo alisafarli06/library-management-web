@@ -174,7 +174,7 @@ describe('MembersPage', () => {
     expect(screen.queryByRole('link', { name: 'Members' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Books' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Authors' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Files' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Files' })).not.toBeInTheDocument();
   });
 
   it('redirects an authenticated USER away from /members', async () => {
