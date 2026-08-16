@@ -22,17 +22,17 @@ function validate(values: MemberFormValues): Record<string, string> {
   const email = values.email.trim();
 
   if (!name) {
-    errors.name = 'Name is required.';
+    errors.name = 'Name is required';
   } else if (name.length > 255) {
     errors.name = 'Name must be at most 255 characters.';
   }
 
   if (!email) {
-    errors.email = 'Email is required.';
+    errors.email = 'Email is required';
   } else if (email.length > 255) {
     errors.email = 'Email must be at most 255 characters.';
   } else if (!isValidEmail(email)) {
-    errors.email = 'Enter a valid email address.';
+    errors.email = 'Enter a valid email address';
   }
 
   return errors;

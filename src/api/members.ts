@@ -5,6 +5,10 @@ export function listMembers(query: PageQuery = {}): Promise<Page<MemberDto>> {
   return getJson<Page<MemberDto>>('/members', query);
 }
 
+export function searchMembers(query: PageQuery & { q?: string } = {}): Promise<Page<MemberDto>> {
+  return getJson<Page<MemberDto>>('/members/search', query);
+}
+
 export function getMember(id: number): Promise<MemberDto> {
   return getJson<MemberDto>(`/members/${id}`);
 }

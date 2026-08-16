@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { createMember, deleteMember, listMembers, updateMember } from '../api/members';
+import { createMember, deleteMember, searchMembers, updateMember } from '../api/members';
+import { ApiError } from '../api/http';
 import { getCurrentRole } from '../auth/session';
 import { errorMessage } from '../components/auth/formErrors';
 import { MemberConfirmDialog } from '../components/members/MemberConfirmDialog';
@@ -8,7 +9,11 @@ import { MemberForm, type MemberFormValues } from '../components/members/MemberF
 import { MemberPagination } from '../components/members/MemberPagination';
 import { MemberTable } from '../components/members/MemberTable';
 import {
+  memberDisplayName,
+  memberHasPlaceholderName,
   memberListQueryToSearchParams,
+  memberQueryHasSearch,
+  nextMemberSort,
   parseMemberListQuery,
   toMemberApiQuery,
   type MemberListQuery,
@@ -18,6 +23,22 @@ import { Button, Card, EmptyState, PageHeader } from '../components/ui/Primitive
 import type { MemberDto, Page } from '../types/api';
 
 const EMPTY_MEMBER_FORM: MemberFormValues = { name: '', email: '' };
+const SEARCH_DEBOUNCE_MS = 350;
+
+function memberDeleteErrorMessage(error: unknown, member: MemberDto): string {
+  const isIntegrityConflict =
+    error instanceof ApiError &&
+    (error.status === 409 || /data integrity violation/i.test(error.message));
+
+  if (isIntegrityConflict) {
+    if ((member.activeLoanCount ?? 0) > 0) {
+      return "Can't delete this member — they still have an active loan. Return the book first, then try again.";
+    }
+    return "Can't delete this member — they still have borrow history linked to their account.";
+  }
+
+  return errorMessage(error, 'Unable to delete the member.');
+}
 
 export function MembersPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -26,6 +47,7 @@ export function MembersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
+  const [searchInput, setSearchInput] = useState(appliedQuery.q);
   const [editor, setEditor] = useState<{ mode: 'create' | 'edit'; memberId?: number; values: MemberFormValues } | null>(
     null,
   );
@@ -36,13 +58,35 @@ export function MembersPage() {
   const canManageMembers = getCurrentRole() === 'ADMIN';
 
   useEffect(() => {
+    setSearchInput(appliedQuery.q);
+  }, [appliedQuery.q]);
+
+  useEffect(() => {
+    const trimmed = searchInput.trim();
+    if (trimmed === appliedQuery.q) {
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      setSearchParams(
+        memberListQueryToSearchParams({
+          ...appliedQuery,
+          page: 0,
+          q: trimmed,
+        }),
+        { replace: true },
+      );
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timeout);
+  }, [searchInput, appliedQuery, setSearchParams]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function loadMembers() {
       setLoading(true);
       setError(null);
       try {
-        const page = await listMembers(toMemberApiQuery(appliedQuery));
+        const page = await searchMembers(toMemberApiQuery(appliedQuery));
         if (!cancelled) {
           setResult(page);
         }
@@ -112,7 +156,7 @@ export function MembersPage() {
         setReloadToken((value) => value + 1);
       }
     } catch (deleteError) {
-      setActionError(errorMessage(deleteError, 'Unable to delete the member.'));
+      setActionError(memberDeleteErrorMessage(deleteError, deleteTarget));
     } finally {
       setSubmitting(false);
     }
@@ -122,6 +166,10 @@ export function MembersPage() {
   const totalPages = result?.totalPages ?? 0;
   const totalElements = result?.totalElements ?? 0;
   const currentPage = result?.number ?? appliedQuery.page;
+  const hasSearch = memberQueryHasSearch(appliedQuery);
+  const hasLoadedEmptyCatalogue = !loading && !error && members.length === 0 && !hasSearch && result != null;
+  const hasFilteredEmpty = !loading && !error && members.length === 0 && hasSearch;
+  const showResultsCard = !error && (loading || members.length > 0 || hasSearch);
 
   return (
     <div className="member-page">
@@ -160,44 +208,61 @@ export function MembersPage() {
         </div>
       ) : null}
 
-      {!error && !loading && members.length === 0 ? (
+      {hasLoadedEmptyCatalogue ? (
         <EmptyState title="No members found." body="There are no member records to display yet." />
       ) : null}
 
-      {!error && (loading || members.length > 0) ? (
+      {showResultsCard ? (
         <Card>
-          <MemberTable
-            members={members}
-            sortDirection={appliedQuery.sortDirection}
-            loading={loading}
-            onSortName={() =>
-              replaceQuery({
-                ...appliedQuery,
-                page: 0,
-                sortDirection: appliedQuery.sortDirection === 'asc' ? 'desc' : 'asc',
-              })
-            }
-            onEdit={(member) => {
-              if (!canManageMembers || member.id == null) {
-                return;
-              }
-              setSuccessMessage(null);
-              setActionError(null);
-              setEditor({
-                mode: 'edit',
-                memberId: member.id,
-                values: { name: member.name, email: member.email },
-              });
-            }}
-            onDelete={(member) => {
-              if (!canManageMembers || member.id == null) {
-                return;
-              }
-              setSuccessMessage(null);
-              setActionError(null);
-              setDeleteTarget(member);
-            }}
-          />
+          <div className="member-toolbar">
+            <label className="member-search">
+              <span className="member-search__label">
+                Search
+                {loading ? <span className="member-search__spinner" aria-hidden="true" /> : null}
+              </span>
+              <input
+                type="search"
+                value={searchInput}
+                placeholder="Search by name or email"
+                autoComplete="off"
+                aria-busy={loading || undefined}
+                onChange={(event) => setSearchInput(event.target.value)}
+              />
+            </label>
+          </div>
+          {hasFilteredEmpty ? (
+            <EmptyState title="No members match your search." body="Try a different name or email." />
+          ) : (
+            <div className={loading ? 'member-table-loading' : undefined}>
+              <MemberTable
+                members={members}
+                sortField={appliedQuery.sortField}
+                sortDirection={appliedQuery.sortDirection}
+                loading={loading}
+                onSort={(field) => replaceQuery(nextMemberSort(appliedQuery, field))}
+                onEdit={(member) => {
+                  if (!canManageMembers || member.id == null) {
+                    return;
+                  }
+                  setSuccessMessage(null);
+                  setActionError(null);
+                  setEditor({
+                    mode: 'edit',
+                    memberId: member.id,
+                    values: { name: member.name, email: member.email },
+                  });
+                }}
+                onDelete={(member) => {
+                  if (!canManageMembers || member.id == null) {
+                    return;
+                  }
+                  setSuccessMessage(null);
+                  setActionError(null);
+                  setDeleteTarget(member);
+                }}
+              />
+            </div>
+          )}
           <MemberPagination
             page={currentPage}
             totalPages={totalPages}
@@ -221,7 +286,7 @@ export function MembersPage() {
 
       {canManageMembers && deleteTarget ? (
         <MemberConfirmDialog
-          title="Delete member"
+          title="Delete member?"
           confirmLabel="Delete member"
           submitting={submitting}
           onConfirm={() => {
@@ -235,8 +300,20 @@ export function MembersPage() {
           }}
         >
           <p className="member-form__hint">
-            Delete <strong>{deleteTarget.name}</strong> ({deleteTarget.email})? This member will be removed and cannot
-            be undone from this screen.
+            Delete{' '}
+            <strong>
+              {memberHasPlaceholderName(deleteTarget)
+                ? deleteTarget.email
+                : memberDisplayName(deleteTarget)}
+            </strong>
+            {memberHasPlaceholderName(deleteTarget) ? null : ` (${deleteTarget.email})`}?
+            {(deleteTarget.activeLoanCount ?? 0) > 0
+              ? ` This member has ${deleteTarget.activeLoanCount} active loan${
+                  deleteTarget.activeLoanCount === 1 ? '' : 's'
+                }.`
+              : null}{' '}
+            Deletion may fail if this member still has loan history or borrowed books. This cannot be undone from this
+            screen.
           </p>
           {actionError ? (
             <p className="member-alert" role="alert">

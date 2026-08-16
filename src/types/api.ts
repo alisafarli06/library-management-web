@@ -25,6 +25,7 @@ export interface MemberDto {
   id?: number;
   name: string;
   email: string;
+  activeLoanCount?: number;
 }
 
 export interface LoginRequest {
