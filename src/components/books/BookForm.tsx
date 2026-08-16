@@ -1,8 +1,9 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { listAuthors } from '../../api/authors';
 import { errorMessage, fieldErrorsFrom } from '../auth/formErrors';
 import { validateCoverFile, validatePrefaceFile } from '../files/fileUtils';
 import { Button } from '../ui/Primitives';
+import { SearchableSelect } from '../ui/SearchableSelect';
 import type { AuthorDto, BookDto } from '../../types/api';
 
 export interface BookFormValues {
@@ -165,13 +166,26 @@ export function BookForm({
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !submitting) {
-        onCancel();
+      if (event.key !== 'Escape' || submitting) {
+        return;
       }
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('[data-searchable-select]')?.querySelector('[aria-expanded="true"]')) {
+        return;
+      }
+      onCancel();
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [onCancel, submitting]);
+
+  const authorOptions = useMemo(
+    () =>
+      authors
+        .filter((author): author is AuthorDto & { id: number } => author.id != null)
+        .map((author) => ({ value: String(author.id), label: author.name })),
+    [authors],
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -309,40 +323,47 @@ export function BookForm({
 
           <label className="book-form__field" htmlFor={authorId}>
             Author
-            <select
+            <SearchableSelect
               id={authorId}
+              options={authorOptions}
               value={values.authorId}
-              disabled={submitting || authorsLoading || Boolean(authorsError)}
+              placeholder="Select an author"
+              noMatchesMessage="No authors found"
+              disabled={submitting || Boolean(authorsError) || (!authorsLoading && authors.length === 0)}
+              loading={authorsLoading}
               aria-invalid={fieldErrors.authorId ? true : undefined}
-              onChange={(event) => setValues((current) => ({ ...current, authorId: event.target.value }))}
-            >
-              <option value="">{authorsLoading ? 'Loading authors…' : 'Select an author'}</option>
-              {authors.map((author) =>
-                author.id == null ? null : (
-                  <option key={author.id} value={author.id}>
-                    {author.name}
-                  </option>
-                ),
-              )}
-            </select>
+              onChange={(authorIdValue) =>
+                setValues((current) => ({ ...current, authorId: authorIdValue }))
+              }
+            />
             {fieldErrors.authorId ? <span className="book-form__error">{fieldErrors.authorId}</span> : null}
           </label>
 
-          <label className="book-form__field" htmlFor={coverId}>
-            Cover image (optional JPEG or PNG)
-            <input
-              id={coverId}
-              type="file"
-              accept="image/jpeg,image/png,.jpg,.jpeg,.png"
-              disabled={submitting || removeCover}
-              aria-invalid={fieldErrors.cover ? true : undefined}
-              onChange={(event) => setCoverFile(event.target.files?.[0] ?? null)}
-            />
-            {existingBook?.coverFileName && !removeCover ? (
+          <div className="book-form__field">
+            <span id={`${coverId}-label`}>Cover image (optional JPEG or PNG)</span>
+            <div className="book-form__file">
+              <input
+                id={coverId}
+                className="book-form__file-input"
+                type="file"
+                accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+                disabled={submitting || removeCover}
+                aria-labelledby={`${coverId}-label`}
+                aria-invalid={fieldErrors.cover ? true : undefined}
+                onChange={(event) => setCoverFile(event.target.files?.[0] ?? null)}
+              />
+              <label htmlFor={coverId} className="book-form__file-trigger">
+                {coverFile ? 'Change file' : 'Choose file'}
+              </label>
+              <span className="book-form__file-name">
+                {coverFile?.name ?? (existingBook?.coverFileName && !removeCover ? existingBook.coverFileName : 'No file chosen')}
+              </span>
+            </div>
+            {existingBook?.coverFileName && !removeCover && !coverFile ? (
               <span className="book-form__hint">Current: {existingBook.coverFileName}</span>
             ) : null}
             {fieldErrors.cover ? <span className="book-form__error">{fieldErrors.cover}</span> : null}
-          </label>
+          </div>
           {existingBook?.coverFileId != null ? (
             <label className="book-form__check">
               <input
@@ -360,21 +381,32 @@ export function BookForm({
             </label>
           ) : null}
 
-          <label className="book-form__field" htmlFor={prefaceId}>
-            Preface (optional PDF)
-            <input
-              id={prefaceId}
-              type="file"
-              accept="application/pdf,.pdf"
-              disabled={submitting || removePreface}
-              aria-invalid={fieldErrors.preface ? true : undefined}
-              onChange={(event) => setPrefaceFile(event.target.files?.[0] ?? null)}
-            />
-            {existingBook?.prefaceFileName && !removePreface ? (
+          <div className="book-form__field">
+            <span id={`${prefaceId}-label`}>Preface (optional PDF)</span>
+            <div className="book-form__file">
+              <input
+                id={prefaceId}
+                className="book-form__file-input"
+                type="file"
+                accept="application/pdf,.pdf"
+                disabled={submitting || removePreface}
+                aria-labelledby={`${prefaceId}-label`}
+                aria-invalid={fieldErrors.preface ? true : undefined}
+                onChange={(event) => setPrefaceFile(event.target.files?.[0] ?? null)}
+              />
+              <label htmlFor={prefaceId} className="book-form__file-trigger">
+                {prefaceFile ? 'Change file' : 'Choose file'}
+              </label>
+              <span className="book-form__file-name">
+                {prefaceFile?.name
+                  ?? (existingBook?.prefaceFileName && !removePreface ? existingBook.prefaceFileName : 'No file chosen')}
+              </span>
+            </div>
+            {existingBook?.prefaceFileName && !removePreface && !prefaceFile ? (
               <span className="book-form__hint">Current: {existingBook.prefaceFileName}</span>
             ) : null}
             {fieldErrors.preface ? <span className="book-form__error">{fieldErrors.preface}</span> : null}
-          </label>
+          </div>
           {existingBook?.prefaceFileId != null ? (
             <label className="book-form__check">
               <input

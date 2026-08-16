@@ -104,9 +104,9 @@
 }
 
 .ui-badge--success {
-  background: var(--color-success-soft);
+  background: #e6f4ec;
   border-color: transparent;
-  color: var(--color-success);
+  color: #1f5c3f;
 }
 
 .ui-badge--danger {

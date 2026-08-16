@@ -451,7 +451,10 @@ describe('BooksPage borrow flow', () => {
 
     await user.type(within(dialog).getByLabelText('Title'), 'Clean Code');
     await user.type(within(dialog).getByLabelText('ISBN'), '9780132350884');
-    await user.selectOptions(within(dialog).getByLabelText('Author'), '1');
+    const authorField = within(dialog).getByLabelText('Author');
+    await waitFor(() => expect(authorField).toBeEnabled());
+    await user.click(authorField);
+    await user.click(await within(dialog).findByRole('option', { name: /Robert C\. Martin/ }));
     const coverInput = within(dialog).getByLabelText(/Cover image/) as HTMLInputElement;
     const cover = new File([new Uint8Array([0xff, 0xd8, 0xff])], 'cover.jpg', { type: 'image/jpeg' });
     await user.upload(coverInput, cover);
@@ -475,7 +478,10 @@ describe('BooksPage borrow flow', () => {
     const dialog = await screen.findByRole('dialog');
     await user.type(within(dialog).getByLabelText('Title'), 'Clean Code');
     await user.type(within(dialog).getByLabelText('ISBN'), '9780132350884');
-    await user.selectOptions(within(dialog).getByLabelText('Author'), '1');
+    const authorField = within(dialog).getByLabelText('Author');
+    await waitFor(() => expect(authorField).toBeEnabled());
+    await user.click(authorField);
+    await user.click(await within(dialog).findByRole('option', { name: /Robert C\. Martin/ }));
     const coverInput = within(dialog).getByLabelText(/Cover image/) as HTMLInputElement;
     fireEvent.change(coverInput, {
       target: { files: [new File(['%PDF'], 'intro.pdf', { type: 'application/pdf' })] },

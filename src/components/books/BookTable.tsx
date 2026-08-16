@@ -1,3 +1,4 @@
+import { BookOpen, Eye, Pencil, Trash2 } from 'lucide-react';
 import { Badge } from '../ui/Primitives';
 import type { BookDto } from '../../types/api';
 import type { BookSortField, SortDirection } from './bookListQuery';
@@ -38,7 +39,7 @@ function materialsLabel(book: BookDto): string {
   if (preface) {
     return 'Preface';
   }
-  return 'None';
+  return '—';
 }
 
 export function BookTable({
@@ -107,21 +108,27 @@ export function BookTable({
                           type="button"
                           className="book-table__action"
                           disabled={book.id == null}
+                          aria-label="Details"
+                          title="Details"
                           onClick={() => onDetails(book)}
                         >
-                          Details
+                          <Eye size={15} strokeWidth={1.75} aria-hidden="true" />
+                          <span>Details</span>
                         </button>
                         <button
                           type="button"
                           className="book-table__action"
                           disabled={book.id == null || !available}
+                          aria-label={available ? 'Borrow' : 'Borrowed'}
+                          title={available ? 'Borrow' : 'Borrowed'}
                           onClick={() => {
                             if (available) {
                               onBorrow(book);
                             }
                           }}
                         >
-                          {available ? 'Borrow' : 'Borrowed'}
+                          <BookOpen size={15} strokeWidth={1.75} aria-hidden="true" />
+                          <span>{available ? 'Borrow' : 'Borrowed'}</span>
                         </button>
                         {canManage ? (
                           <>
@@ -129,17 +136,23 @@ export function BookTable({
                               type="button"
                               className="book-table__action"
                               disabled={book.id == null}
+                              aria-label="Edit"
+                              title="Edit"
                               onClick={() => onEdit(book)}
                             >
-                              Edit
+                              <Pencil size={15} strokeWidth={1.75} aria-hidden="true" />
+                              <span>Edit</span>
                             </button>
                             <button
                               type="button"
-                              className="book-table__action"
+                              className="book-table__action book-table__action--danger"
                               disabled={book.id == null}
+                              aria-label="Delete"
+                              title="Delete"
                               onClick={() => onDelete(book)}
                             >
-                              Delete
+                              <Trash2 size={15} strokeWidth={1.75} aria-hidden="true" />
+                              <span>Delete</span>
                             </button>
                           </>
                         ) : null}
