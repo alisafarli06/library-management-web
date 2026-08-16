@@ -1,4 +1,5 @@
 import { useState, type InputHTMLAttributes } from 'react';
+import { EyeIcon, EyeOffIcon, LockIcon } from './icons';
 
 interface PasswordFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label: string;
@@ -15,7 +16,8 @@ export function PasswordField({ id, label, error, ...inputProps }: PasswordField
       <label className="field__label" htmlFor={id}>
         {label}
       </label>
-      <div className="field__control">
+      <div className="field__control field__control--toggle">
+        <LockIcon />
         <input
           {...inputProps}
           id={id}
@@ -28,11 +30,12 @@ export function PasswordField({ id, label, error, ...inputProps }: PasswordField
           id={toggleId}
           type="button"
           className="field__toggle"
+          disabled={inputProps.disabled}
           onClick={() => setVisible((current) => !current)}
           aria-pressed={visible}
           aria-label={visible ? 'Hide password' : 'Show password'}
         >
-          {visible ? 'Hide' : 'Show'}
+          {visible ? <EyeOffIcon /> : <EyeIcon />}
         </button>
       </div>
       {error ? (

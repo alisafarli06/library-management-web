@@ -5,6 +5,7 @@ import { AuthLayout } from '../components/auth/AuthLayout';
 import { PasswordField } from '../components/auth/PasswordField';
 import { TextField } from '../components/auth/TextField';
 import { errorMessage, fieldErrorsFrom, isValidEmail } from '../components/auth/formErrors';
+import { EnvelopeIcon } from '../components/auth/icons';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -58,10 +59,10 @@ export function LoginPage() {
   return (
     <AuthLayout
       title="Sign in"
-      subtitle="Use the email and password for your library account."
+      subtitle="Welcome back. Sign in to your library account."
       footer={
         <>
-          Need an account? <Link to="/register">Create one</Link>
+          Don&apos;t have an account? <Link to="/register">Create one</Link>
         </>
       }
     >
@@ -77,6 +78,7 @@ export function LoginPage() {
           name="email"
           type="email"
           autoComplete="email"
+          icon={<EnvelopeIcon />}
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           error={fieldErrors.email}

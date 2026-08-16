@@ -5,6 +5,7 @@ import { AuthLayout } from '../components/auth/AuthLayout';
 import { PasswordField } from '../components/auth/PasswordField';
 import { TextField } from '../components/auth/TextField';
 import { errorMessage, fieldErrorsFrom, isValidEmail } from '../components/auth/formErrors';
+import { EnvelopeIcon, UserIcon } from '../components/auth/icons';
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -74,11 +75,11 @@ export function RegisterPage() {
 
   return (
     <AuthLayout
-      title="Create an account"
-      subtitle="Registration issues a USER account and signs you in immediately."
+      title="Create your account"
+      subtitle="New accounts are issued as USER and sign you in immediately."
       footer={
         <>
-          Already registered? <Link to="/login">Sign in</Link>
+          Already have an account? <Link to="/login">Sign in</Link>
         </>
       }
     >
@@ -93,6 +94,7 @@ export function RegisterPage() {
           label="Full name"
           name="fullName"
           autoComplete="name"
+          icon={<UserIcon />}
           value={fullName}
           onChange={(event) => setFullName(event.target.value)}
           error={fieldErrors.fullName}
@@ -104,6 +106,7 @@ export function RegisterPage() {
           name="email"
           type="email"
           autoComplete="email"
+          icon={<EnvelopeIcon />}
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           error={fieldErrors.email}

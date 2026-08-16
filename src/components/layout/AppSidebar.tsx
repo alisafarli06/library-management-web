@@ -12,7 +12,10 @@ export function AppSidebar({ id, onNavigate }: AppSidebarProps) {
 
   return (
     <aside className="app-sidebar" id={id}>
-      <p className="app-sidebar__brand">Library Management</p>
+      <div className="app-sidebar__brand">
+        <p className="app-sidebar__mark">Library Management</p>
+        <p className="app-sidebar__tag">Staff catalogue</p>
+      </div>
       <nav className="app-sidebar__nav" aria-label="Application">
         {items.map((item) => (
           <NavLink

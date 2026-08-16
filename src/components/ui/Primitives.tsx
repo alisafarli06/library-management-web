@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import './ui.css';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -32,8 +32,20 @@ export function Card({ children, className }: { children: ReactNode; className?:
   return <section className={['ui-card', className].filter(Boolean).join(' ')}>{children}</section>;
 }
 
-export function Badge({ children }: { children: ReactNode }) {
-  return <span className="ui-badge">{children}</span>;
+export function Badge({
+  children,
+  className,
+  tone = 'neutral',
+}: {
+  children: ReactNode;
+  className?: string;
+  tone?: 'neutral' | 'success' | 'danger' | 'warning';
+}) {
+  return (
+    <span className={['ui-badge', tone !== 'neutral' ? `ui-badge--${tone}` : '', className].filter(Boolean).join(' ')}>
+      {children}
+    </span>
+  );
 }
 
 export function PageHeader({ title, description }: { title: string; description?: string }) {

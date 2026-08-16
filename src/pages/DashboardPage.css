@@ -1,11 +1,13 @@
 .dashboard {
   display: grid;
-  gap: 1.5rem;
+  gap: var(--space-6);
 }
 
 .dashboard__section-title {
-  margin: 0 0 0.9rem;
-  font-size: 0.95rem;
+  margin: 0 0 var(--space-4);
+  font-family: var(--font-display);
+  font-size: var(--font-size-section-title);
+  font-weight: var(--font-weight-medium);
   letter-spacing: -0.02em;
 }
 
