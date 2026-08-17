@@ -7,7 +7,6 @@ import {
   FileText,
   Search,
   Settings,
-  UserCog,
   UserPen,
   Users,
 } from 'lucide-react';
@@ -293,15 +292,8 @@ export function DashboardPage() {
                 to="/members"
                 icon={<Users aria-hidden="true" size={18} strokeWidth={1.75} />}
                 title="Members"
-                description="Keep borrower records and circulation actions in one place."
+                description="Manage members, linked login roles, and account status."
                 cta="Manage Members"
-              />
-              <ActionCard
-                to="/users"
-                icon={<UserCog aria-hidden="true" size={18} strokeWidth={1.75} />}
-                title="Users"
-                description="View accounts and change USER or ADMIN roles."
-                cta="Manage users"
               />
               <ActionCard
                 to="/loans"

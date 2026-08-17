@@ -1,6 +1,6 @@
-import type { Role } from './enums';
+import type { AccountStatus, Role } from './enums';
 
-export type { Role };
+export type { AccountStatus, Role };
 
 export interface BookDto {
   id?: number;
@@ -27,6 +27,10 @@ export interface MemberDto {
   name: string;
   email: string;
   activeLoanCount?: number;
+  /** Linked login account. Role and status are read from this User, not stored on Member. */
+  userId?: number | null;
+  role?: Role | null;
+  status?: AccountStatus | null;
 }
 
 export interface LoginRequest {
@@ -59,11 +63,16 @@ export interface AdminUserDto {
   fullName: string;
   email: string;
   role: Role;
+  status: AccountStatus;
   createdAt: string;
 }
 
 export interface UpdateUserRoleRequest {
   role: Role;
+}
+
+export interface UpdateUserStatusRequest {
+  blocked: boolean;
 }
 
 export interface UpdateProfileRequest {

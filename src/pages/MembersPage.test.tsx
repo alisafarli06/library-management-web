@@ -18,6 +18,8 @@ const {
   createMember,
   updateMember,
   deleteMember,
+  updateUserRole,
+  updateUserStatus,
 } = vi.hoisted(() => ({
   getCurrentRole: vi.fn(),
   hasValidAccessSession: vi.fn(),
@@ -27,6 +29,8 @@ const {
   createMember: vi.fn(),
   updateMember: vi.fn(),
   deleteMember: vi.fn(),
+  updateUserRole: vi.fn(),
+  updateUserStatus: vi.fn(),
 }));
 
 vi.mock('../auth/session', () => ({
@@ -35,6 +39,11 @@ vi.mock('../auth/session', () => ({
   getCurrentEmail,
   getAccessTokenExpiresAt,
   clearSession: vi.fn(),
+}));
+
+vi.mock('../api/users', () => ({
+  updateUserRole,
+  updateUserStatus,
 }));
 
 vi.mock('../api/members', () => ({
@@ -91,6 +100,17 @@ vi.mock('../api/books', () => ({
   deleteBook: vi.fn(),
 }));
 
+vi.mock('../api/admin', () => ({
+  getAnalyticsSummary: vi.fn().mockResolvedValue({
+    totalLoans: 0,
+    activeLoans: 0,
+    returnedLoans: 0,
+    totalBooksBorrowed: 0,
+    totalMembersWithLoans: 0,
+  }),
+  getAdminDashboard: vi.fn(),
+}));
+
 vi.mock('../api/authors', () => ({
   listAuthors: vi.fn().mockResolvedValue({
     content: [],
@@ -118,8 +138,42 @@ vi.mock('../api/authors', () => ({
   getAuthor: vi.fn(),
 }));
 
-const ada: MemberDto = { id: 3, name: 'Ada Lovelace', email: 'ada@library.com', activeLoanCount: 0 };
-const grace: MemberDto = { id: 4, name: 'Grace Hopper', email: 'grace@library.com', activeLoanCount: 2 };
+const ada: MemberDto = {
+  id: 3,
+  name: 'Ada Lovelace',
+  email: 'ada@library.com',
+  activeLoanCount: 0,
+  userId: 10,
+  role: 'USER',
+  status: 'ACTIVE',
+};
+const grace: MemberDto = {
+  id: 4,
+  name: 'Grace Hopper',
+  email: 'grace@library.com',
+  activeLoanCount: 2,
+  userId: 11,
+  role: 'USER',
+  status: 'ACTIVE',
+};
+const adminSelf: MemberDto = {
+  id: 1,
+  name: 'Library Admin',
+  email: 'admin@library.com',
+  activeLoanCount: 0,
+  userId: 1,
+  role: 'ADMIN',
+  status: 'ACTIVE',
+};
+const secondAdmin: MemberDto = {
+  id: 8,
+  name: 'Second Admin',
+  email: 'second@library.com',
+  activeLoanCount: 0,
+  userId: 20,
+  role: 'ADMIN',
+  status: 'ACTIVE',
+};
 const unnamed: MemberDto = {
   id: 5,
   name: 'attach-admin@library.com',
@@ -170,6 +224,22 @@ describe('MembersPage', () => {
     createMember.mockResolvedValue(ada);
     updateMember.mockResolvedValue(ada);
     deleteMember.mockResolvedValue(undefined);
+    updateUserRole.mockResolvedValue({
+      id: 10,
+      fullName: 'Ada Lovelace',
+      email: 'ada@library.com',
+      role: 'ADMIN',
+      status: 'ACTIVE',
+      createdAt: '2026-01-01T00:00:00Z',
+    });
+    updateUserStatus.mockResolvedValue({
+      id: 10,
+      fullName: 'Ada Lovelace',
+      email: 'ada@library.com',
+      role: 'USER',
+      status: 'BLOCKED',
+      createdAt: '2026-01-01T00:00:00Z',
+    });
   });
 
   it('lets an ADMIN load members and see management actions', async () => {
@@ -182,6 +252,8 @@ describe('MembersPage', () => {
     expect(screen.getByRole('button', { name: 'Add Member' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit Ada Lovelace' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete Ada Lovelace' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Make Admin' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: 'Block' }).length).toBeGreaterThan(0);
   });
 
   it('shows a muted placeholder when name duplicates email', async () => {
@@ -193,10 +265,25 @@ describe('MembersPage', () => {
     expect(screen.getByRole('button', { name: 'Edit attach-admin@library.com' })).toBeInTheDocument();
   });
 
+  it('shows no login account instead of role actions when a member has no linked user', async () => {
+    searchMembers.mockResolvedValue(pageOf([unnamed]));
+    renderMembersPage();
+
+    const row = (await screen.findByText('attach-admin@library.com')).closest('tr');
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).getByText('No login account')).toBeInTheDocument();
+    expect(within(row as HTMLElement).queryByRole('button', { name: 'Make Admin' })).not.toBeInTheDocument();
+    expect(within(row as HTMLElement).queryByRole('button', { name: 'Remove Admin' })).not.toBeInTheDocument();
+    expect(within(row as HTMLElement).queryByRole('button', { name: 'Block' })).not.toBeInTheDocument();
+    expect(within(row as HTMLElement).queryByRole('button', { name: 'Unblock' })).not.toBeInTheDocument();
+    expect(within(row as HTMLElement).getByRole('button', { name: 'Edit attach-admin@library.com' })).toBeInTheDocument();
+  });
+
   it('does not show Members in USER navigation', () => {
     getCurrentRole.mockReturnValue('USER');
     expect(getNavItems('USER').map((item) => item.to)).not.toContain('/members');
     expect(getNavItems('ADMIN').map((item) => item.to)).toContain('/members');
+    expect(getNavItems('ADMIN').map((item) => item.to)).not.toContain('/users');
 
     render(
       <MemoryRouter>
@@ -205,6 +292,7 @@ describe('MembersPage', () => {
     );
 
     expect(screen.queryByRole('link', { name: 'Members' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Users' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Books' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Authors' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Files' })).not.toBeInTheDocument();
@@ -224,6 +312,30 @@ describe('MembersPage', () => {
     expect(searchMembers).not.toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: 'Add Member' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Members' })).not.toBeInTheDocument();
+  });
+
+  it('does not expose a Users page or navigation item', async () => {
+    expect(getNavItems('ADMIN').map((item) => item.to)).not.toContain('/users');
+
+    const { unmount } = render(
+      <MemoryRouter>
+        <AppSidebar id="nav" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('link', { name: 'Members' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Users' })).not.toBeInTheDocument();
+    unmount();
+
+    render(
+      <MemoryRouter initialEntries={['/users']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: /Welcome back/ })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Users' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Users' })).not.toBeInTheDocument();
   });
 
   it('paginates with a server-side request', async () => {
@@ -432,5 +544,125 @@ describe('MembersPage', () => {
     await user.click(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByText('Ada Lovelace')).toBeInTheDocument();
     expect(searchMembers).toHaveBeenCalledTimes(2);
+  });
+
+  it('hides role and block actions on the current admin row', async () => {
+    searchMembers.mockResolvedValue(pageOf([adminSelf, ada]));
+    renderMembersPage();
+
+    const selfRow = (await screen.findByText('Library Admin')).closest('tr');
+    expect(selfRow).not.toBeNull();
+    expect(within(selfRow as HTMLElement).queryByRole('button', { name: 'Remove Admin' })).not.toBeInTheDocument();
+    expect(within(selfRow as HTMLElement).queryByRole('button', { name: 'Block' })).not.toBeInTheDocument();
+    expect(within(selfRow as HTMLElement).getByRole('button', { name: 'Delete Library Admin' })).toBeInTheDocument();
+
+    const adaRow = screen.getByText('Ada Lovelace').closest('tr');
+    expect(adaRow).not.toBeNull();
+    expect(within(adaRow as HTMLElement).getByRole('button', { name: 'Make Admin' })).toBeInTheDocument();
+    expect(within(adaRow as HTMLElement).getByRole('button', { name: 'Block' })).toBeInTheDocument();
+  });
+
+  it('asks for confirmation before promoting a USER to ADMIN', async () => {
+    const user = userEvent.setup();
+    renderMembersPage();
+    const row = (await screen.findByText('Ada Lovelace')).closest('tr');
+    await user.click(within(row as HTMLElement).getByRole('button', { name: 'Make Admin' }));
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent('Are you sure you want to make this user an admin?');
+    expect(updateUserRole).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Make Admin' }));
+    await waitFor(() => {
+      expect(updateUserRole).toHaveBeenCalledWith(10, 'ADMIN');
+    });
+    expect(await screen.findByText('Ada Lovelace is now an ADMIN.')).toBeInTheDocument();
+  });
+
+  it('asks for confirmation before removing ADMIN', async () => {
+    searchMembers.mockResolvedValue(pageOf([secondAdmin]));
+    updateUserRole.mockResolvedValue({
+      id: 20,
+      fullName: 'Second Admin',
+      email: 'second@library.com',
+      role: 'USER',
+      status: 'ACTIVE',
+      createdAt: '2026-01-01T00:00:00Z',
+    });
+    const user = userEvent.setup();
+    renderMembersPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Remove Admin' }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent('Are you sure you want to remove admin privileges?');
+
+    await user.click(within(dialog).getByRole('button', { name: 'Remove Admin' }));
+    await waitFor(() => {
+      expect(updateUserRole).toHaveBeenCalledWith(20, 'USER');
+    });
+  });
+
+  it('asks for confirmation before blocking a user and then refetches', async () => {
+    const user = userEvent.setup();
+    renderMembersPage();
+    const row = (await screen.findByText('Ada Lovelace')).closest('tr');
+    await user.click(within(row as HTMLElement).getByRole('button', { name: 'Block' }));
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent('Are you sure you want to block this user?');
+    expect(updateUserStatus).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Block' }));
+    await waitFor(() => {
+      expect(updateUserStatus).toHaveBeenCalledWith(10, true);
+    });
+    expect(await screen.findByText('Ada Lovelace is blocked.')).toBeInTheDocument();
+    expect(searchMembers).toHaveBeenCalledTimes(2);
+  });
+
+  it('asks for confirmation before unblocking a user and then refetches', async () => {
+    searchMembers.mockResolvedValue(pageOf([{ ...ada, status: 'BLOCKED' }]));
+    updateUserStatus.mockResolvedValue({
+      id: 10,
+      fullName: 'Ada Lovelace',
+      email: 'ada@library.com',
+      role: 'USER',
+      status: 'ACTIVE',
+      createdAt: '2026-01-01T00:00:00Z',
+    });
+    const user = userEvent.setup();
+    renderMembersPage();
+    const row = (await screen.findByText('Ada Lovelace')).closest('tr');
+    await user.click(within(row as HTMLElement).getByRole('button', { name: 'Unblock' }));
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent('Unblock Ada Lovelace? They will be able to sign in again.');
+    expect(updateUserStatus).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Unblock' }));
+    await waitFor(() => {
+      expect(updateUserStatus).toHaveBeenCalledWith(10, false);
+    });
+    expect(await screen.findByText('Ada Lovelace is unblocked.')).toBeInTheDocument();
+    expect(searchMembers).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows a 403 message when role change is forbidden', async () => {
+    updateUserRole.mockRejectedValue(
+      new ApiError({
+        timestamp: '2026-01-01T00:00:00Z',
+        status: 403,
+        error: 'Forbidden',
+        message: 'Access denied',
+        fieldErrors: null,
+      }),
+    );
+    const user = userEvent.setup();
+    renderMembersPage();
+    const row = (await screen.findByText('Ada Lovelace')).closest('tr');
+    await user.click(within(row as HTMLElement).getByRole('button', { name: 'Make Admin' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Make Admin' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Access denied');
   });
 });

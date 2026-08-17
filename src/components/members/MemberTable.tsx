@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp, ChevronsUpDown, Pencil, Trash2 } from 'lucide-react';
 import type { MemberDto } from '../../types/api';
+import { Badge, Button } from '../ui/Primitives';
 import {
   memberActionLabel,
   memberDisplayName,
@@ -13,9 +14,15 @@ interface MemberTableProps {
   sortField: MemberSortField;
   sortDirection: SortDirection;
   loading: boolean;
+  canManageAccounts: boolean;
+  currentEmail: string | null;
   onSort: (field: MemberSortField) => void;
   onEdit: (member: MemberDto) => void;
   onDelete: (member: MemberDto) => void;
+  onMakeAdmin: (member: MemberDto) => void;
+  onRemoveAdmin: (member: MemberDto) => void;
+  onBlock: (member: MemberDto) => void;
+  onUnblock: (member: MemberDto) => void;
 }
 
 function SortHeader({
@@ -59,14 +66,28 @@ function SortHeader({
   );
 }
 
+function isSelfMember(member: MemberDto, currentEmail: string | null): boolean {
+  return currentEmail != null && member.email.toLowerCase() === currentEmail.toLowerCase();
+}
+
+function hasLinkedLoginAccount(member: MemberDto): boolean {
+  return member.userId != null;
+}
+
 export function MemberTable({
   members,
   sortField,
   sortDirection,
   loading,
+  canManageAccounts,
+  currentEmail,
   onSort,
   onEdit,
   onDelete,
+  onMakeAdmin,
+  onRemoveAdmin,
+  onBlock,
+  onUnblock,
 }: MemberTableProps) {
   return (
     <div className="member-table-wrap">
@@ -87,6 +108,8 @@ export function MemberTable({
               direction={sortDirection}
               onSort={onSort}
             />
+            <th>Login role</th>
+            <th>Account status</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -94,11 +117,13 @@ export function MemberTable({
           {loading && members.length === 0
             ? Array.from({ length: 5 }, (_, index) => (
                 <tr key={`skeleton-${index}`} className="member-table__skeleton">
-                  <td colSpan={3}>Loading members…</td>
+                  <td colSpan={5}>Loading members…</td>
                 </tr>
               ))
             : members.map((member) => {
                 const actionLabel = memberActionLabel(member);
+                const linkedAccount = hasLinkedLoginAccount(member);
+                const hideSelfActions = isSelfMember(member, currentEmail);
                 return (
                   <tr key={member.id ?? member.email}>
                     <td>
@@ -109,8 +134,52 @@ export function MemberTable({
                       )}
                     </td>
                     <td>{member.email}</td>
+                    {linkedAccount ? (
+                      <>
+                        <td>
+                          {member.role ? (
+                            <Badge tone={member.role === 'ADMIN' ? 'info' : 'neutral'}>{member.role}</Badge>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                        <td>
+                          {member.status ? (
+                            <Badge tone={member.status === 'BLOCKED' ? 'danger' : 'success'}>{member.status}</Badge>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                      </>
+                    ) : (
+                      <td colSpan={2}>
+                        <span className="member-table__placeholder">No login account</span>
+                      </td>
+                    )}
                     <td>
                       <div className="member-table__actions">
+                        {canManageAccounts && linkedAccount && member.role != null && member.status != null && !hideSelfActions ? (
+                          <>
+                            {member.role === 'USER' ? (
+                              <Button type="button" variant="secondary" onClick={() => onMakeAdmin(member)}>
+                                Make Admin
+                              </Button>
+                            ) : (
+                              <Button type="button" variant="secondary" onClick={() => onRemoveAdmin(member)}>
+                                Remove Admin
+                              </Button>
+                            )}
+                            {member.status === 'BLOCKED' ? (
+                              <Button type="button" variant="secondary" onClick={() => onUnblock(member)}>
+                                Unblock
+                              </Button>
+                            ) : (
+                              <Button type="button" variant="secondary" onClick={() => onBlock(member)}>
+                                Block
+                              </Button>
+                            )}
+                          </>
+                        ) : null}
                         <button
                           type="button"
                           className="member-table__action"

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { createMember, deleteMember, searchMembers, updateMember } from '../api/members';
+import { updateUserRole, updateUserStatus } from '../api/users';
 import { ApiError } from '../api/http';
-import { getCurrentRole } from '../auth/session';
+import { getCurrentEmail, getCurrentRole } from '../auth/session';
 import { errorMessage } from '../components/auth/formErrors';
 import { MemberConfirmDialog } from '../components/members/MemberConfirmDialog';
 import { MemberForm, type MemberFormValues } from '../components/members/MemberForm';
@@ -55,7 +56,10 @@ export function MembersPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MemberDto | null>(null);
+  const [roleTarget, setRoleTarget] = useState<{ member: MemberDto; nextRole: 'USER' | 'ADMIN' } | null>(null);
+  const [statusTarget, setStatusTarget] = useState<{ member: MemberDto; blocked: boolean } | null>(null);
   const canManageMembers = getCurrentRole() === 'ADMIN';
+  const currentEmail = getCurrentEmail();
 
   useEffect(() => {
     setSearchInput(appliedQuery.q);
@@ -162,6 +166,50 @@ export function MembersPage() {
     }
   }
 
+  async function handleRoleChange() {
+    if (!canManageMembers || !roleTarget?.member.userId || submitting) {
+      return;
+    }
+    setSubmitting(true);
+    setActionError(null);
+    try {
+      await updateUserRole(roleTarget.member.userId, roleTarget.nextRole);
+      setSuccessMessage(
+        roleTarget.nextRole === 'ADMIN'
+          ? `${memberDisplayName(roleTarget.member)} is now an ADMIN.`
+          : `Admin privileges removed from ${memberDisplayName(roleTarget.member)}.`,
+      );
+      setRoleTarget(null);
+      setReloadToken((value) => value + 1);
+    } catch (roleError) {
+      setActionError(errorMessage(roleError, 'Unable to change the user role.'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleStatusChange() {
+    if (!canManageMembers || !statusTarget?.member.userId || submitting) {
+      return;
+    }
+    setSubmitting(true);
+    setActionError(null);
+    try {
+      await updateUserStatus(statusTarget.member.userId, statusTarget.blocked);
+      setSuccessMessage(
+        statusTarget.blocked
+          ? `${memberDisplayName(statusTarget.member)} is blocked.`
+          : `${memberDisplayName(statusTarget.member)} is unblocked.`,
+      );
+      setStatusTarget(null);
+      setReloadToken((value) => value + 1);
+    } catch (statusError) {
+      setActionError(errorMessage(statusError, 'Unable to change the account status.'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   const members = result?.content ?? [];
   const totalPages = result?.totalPages ?? 0;
   const totalElements = result?.totalElements ?? 0;
@@ -174,7 +222,10 @@ export function MembersPage() {
   return (
     <div className="member-page">
       <div className="member-page__toolbar">
-        <PageHeader title="Members" description="Manage library members. Borrowing stays on the Books page." />
+        <PageHeader
+          title="Members"
+          description="Manage library members and their linked login accounts. Role and status belong to the login account. Borrowing stays on the Books page."
+        />
         {canManageMembers ? (
           <Button
             type="button"
@@ -239,6 +290,8 @@ export function MembersPage() {
                 sortField={appliedQuery.sortField}
                 sortDirection={appliedQuery.sortDirection}
                 loading={loading}
+                canManageAccounts={canManageMembers}
+                currentEmail={currentEmail}
                 onSort={(field) => replaceQuery(nextMemberSort(appliedQuery, field))}
                 onEdit={(member) => {
                   if (!canManageMembers || member.id == null) {
@@ -259,6 +312,26 @@ export function MembersPage() {
                   setSuccessMessage(null);
                   setActionError(null);
                   setDeleteTarget(member);
+                }}
+                onMakeAdmin={(member) => {
+                  setSuccessMessage(null);
+                  setActionError(null);
+                  setRoleTarget({ member, nextRole: 'ADMIN' });
+                }}
+                onRemoveAdmin={(member) => {
+                  setSuccessMessage(null);
+                  setActionError(null);
+                  setRoleTarget({ member, nextRole: 'USER' });
+                }}
+                onBlock={(member) => {
+                  setSuccessMessage(null);
+                  setActionError(null);
+                  setStatusTarget({ member, blocked: true });
+                }}
+                onUnblock={(member) => {
+                  setSuccessMessage(null);
+                  setActionError(null);
+                  setStatusTarget({ member, blocked: false });
                 }}
               />
             </div>
@@ -314,6 +387,64 @@ export function MembersPage() {
               : null}{' '}
             Deletion may fail if this member still has loan history or borrowed books. This cannot be undone from this
             screen.
+          </p>
+          {actionError ? (
+            <p className="member-alert" role="alert">
+              {actionError}
+            </p>
+          ) : null}
+        </MemberConfirmDialog>
+      ) : null}
+
+      {canManageMembers && roleTarget ? (
+        <MemberConfirmDialog
+          title={roleTarget.nextRole === 'ADMIN' ? 'Make this user an admin?' : 'Remove admin privileges?'}
+          confirmLabel={roleTarget.nextRole === 'ADMIN' ? 'Make Admin' : 'Remove Admin'}
+          submitting={submitting}
+          onConfirm={() => {
+            void handleRoleChange();
+          }}
+          onCancel={() => {
+            if (!submitting) {
+              setRoleTarget(null);
+              setActionError(null);
+            }
+          }}
+        >
+          <p className="member-form__hint">
+            {roleTarget.nextRole === 'ADMIN'
+              ? 'Are you sure you want to make this user an admin?'
+              : 'Are you sure you want to remove admin privileges?'}{' '}
+            <strong>{memberDisplayName(roleTarget.member)}</strong> ({roleTarget.member.email})
+          </p>
+          {actionError ? (
+            <p className="member-alert" role="alert">
+              {actionError}
+            </p>
+          ) : null}
+        </MemberConfirmDialog>
+      ) : null}
+
+      {canManageMembers && statusTarget ? (
+        <MemberConfirmDialog
+          title={statusTarget.blocked ? 'Block this user?' : 'Unblock this user?'}
+          confirmLabel={statusTarget.blocked ? 'Block' : 'Unblock'}
+          submitting={submitting}
+          onConfirm={() => {
+            void handleStatusChange();
+          }}
+          onCancel={() => {
+            if (!submitting) {
+              setStatusTarget(null);
+              setActionError(null);
+            }
+          }}
+        >
+          <p className="member-form__hint">
+            {statusTarget.blocked
+              ? 'Are you sure you want to block this user?'
+              : `Unblock ${memberDisplayName(statusTarget.member)}? They will be able to sign in again.`}{' '}
+            <strong>{memberDisplayName(statusTarget.member)}</strong> ({statusTarget.member.email})
           </p>
           {actionError ? (
             <p className="member-alert" role="alert">

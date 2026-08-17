@@ -1,10 +1,11 @@
 import { defineConfig } from 'vitest/config';
 import { loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import { resolveDevApiProxyTarget } from './src/devApiProxyTarget';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const apiOrigin = env.VITE_API_ORIGIN || 'http://localhost:8080';
+  const proxyTarget = resolveDevApiProxyTarget(env.VITE_API_ORIGIN);
 
   return {
     plugins: [react()],
@@ -16,7 +17,7 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       proxy: {
         '/api': {
-          target: apiOrigin,
+          target: proxyTarget,
           changeOrigin: true,
         },
       },

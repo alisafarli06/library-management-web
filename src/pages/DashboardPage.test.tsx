@@ -169,6 +169,7 @@ describe('DashboardPage', () => {
     expect(screen.queryByRole('heading', { name: 'Your recent loans' })).not.toBeInTheDocument();
 
     expect(screen.getByRole('heading', { name: 'Members' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Users' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Analytics' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View Loans' })).toHaveAttribute('href', '/loans');
     expect(getAnalyticsSummary).toHaveBeenCalled();

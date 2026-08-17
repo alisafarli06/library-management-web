@@ -22,7 +22,7 @@ npm install
 cp .env.example .env
 ```
 
-`VITE_API_ORIGIN` defaults to `http://localhost:8080`, matching the backend README.
+`VITE_API_ORIGIN` defaults to `http://localhost:8080`. During `npm run dev`, `/api` is always proxied to the local API (not to a production Render URL that may be in `.env`). Production builds call `VITE_API_ORIGIN` directly.
 
 ## Scripts
 
@@ -33,7 +33,7 @@ cp .env.example .env
 | `npm run build` | Typecheck and production bundle |
 | `npm run preview` | Serve the production build locally |
 
-During development, requests to `/api` are proxied to `VITE_API_ORIGIN` so the browser can call the documented Spring Boot `/api` prefix without CORS setup on the frontend.
+During development, requests to `/api` are proxied to `http://localhost:8080`. A production `VITE_API_ORIGIN` in `.env` is ignored by the dev proxy so localhost:5173 is not sent to Render (which only allows the Vercel origin).
 
 ## What is not included yet
 

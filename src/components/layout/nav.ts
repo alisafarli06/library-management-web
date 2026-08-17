@@ -6,7 +6,6 @@ import {
   Clock,
   LayoutDashboard,
   Settings,
-  UserCog,
   UserPen,
   Users,
 } from 'lucide-react';
@@ -26,7 +25,6 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { to: '/loans', label: 'Loans', icon: ArrowLeftRight, adminOnly: true },
   { to: '/authors', label: 'Authors', icon: UserPen },
   { to: '/members', label: 'Members', icon: Users, adminOnly: true },
-  { to: '/users', label: 'Users', icon: UserCog, adminOnly: true },
   { to: '/analytics', label: 'Analytics', icon: BarChart3, adminOnly: true },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
@@ -39,7 +37,6 @@ export const PAGE_TITLES: Record<string, string> = {
   '/analytics': 'Analytics',
   '/authors': 'Authors',
   '/members': 'Members',
-  '/users': 'Users',
   '/settings': 'Settings',
 };
 

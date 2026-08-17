@@ -6,7 +6,6 @@ import { DashboardPage } from './pages/DashboardPage';
 import { BooksPage } from './pages/BooksPage';
 import { AuthorsPage } from './pages/AuthorsPage';
 import { MembersPage } from './pages/MembersPage';
-import { UsersPage } from './pages/UsersPage';
 import { MyLoansPage } from './pages/MyLoansPage';
 import { AdminLoansPage } from './pages/AdminLoansPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
@@ -41,7 +40,6 @@ export default function App() {
             <Route path="/loans" element={<AdminLoansPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/members" element={<MembersPage />} />
-            <Route path="/users" element={<UsersPage />} />
           </Route>
         </Route>
       </Route>
