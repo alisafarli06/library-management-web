@@ -8,6 +8,7 @@ export interface BookDto {
   isbn: string;
   publishedYear?: number | null;
   authorId: number;
+  authorName?: string;
   available?: boolean;
   coverFileId?: number | null;
   coverFileName?: string | null;

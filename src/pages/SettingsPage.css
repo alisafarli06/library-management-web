@@ -106,10 +106,36 @@
   box-shadow: var(--shadow-sm);
 }
 
-.settings-form .field__input[readonly] {
+.settings-form .field:has(#settings-email) .field__input,
+.settings-form .field__input[readonly]:disabled {
   background: var(--color-surface-muted);
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+  opacity: 0.72;
   cursor: default;
+  box-shadow: none;
+  -webkit-text-fill-color: var(--color-text-muted);
+}
+
+.settings-form .field:has(#settings-email) .field__input:hover,
+.settings-form .field__input[readonly]:disabled:hover {
+  border-color: var(--color-border);
+}
+
+.settings-form .field:has(#settings-email) .field__input:focus,
+.settings-form .field__input[readonly]:disabled:focus,
+.settings-form .field:has(#settings-email) .field__input:focus-visible,
+.settings-form .field__input[readonly]:disabled:focus-visible {
+  border-color: var(--color-border);
+  box-shadow: none;
+  outline: none;
+}
+
+.settings-field-hint {
+  margin: calc(var(--space-2) * -1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  line-height: 1.45;
 }
 
 @media (max-width: 900px) {

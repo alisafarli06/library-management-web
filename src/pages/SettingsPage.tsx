@@ -293,9 +293,13 @@ export function SettingsPage() {
                 autoComplete="email"
                 value={email}
                 readOnly
-                disabled={profileLoading}
+                disabled
                 aria-readonly="true"
+                aria-describedby="settings-email-hint"
               />
+              <p id="settings-email-hint" className="settings-field-hint">
+                Your email is used to sign in and cannot be changed here.
+              </p>
 
               <div className="settings-form__actions">
                 <Button type="submit" disabled={profileSaving || profileLoading || Boolean(profileLoadError)}>

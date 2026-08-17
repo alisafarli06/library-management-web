@@ -241,7 +241,7 @@ describe('MyLoansPage', () => {
     expect(screen.getByText('Books you borrow will appear here.')).toBeInTheDocument();
   });
 
-  it('shows ApiError.message, including a missing-member 404, and retries', async () => {
+  it('shows ApiError.message for a missing-member 404 and retries for USER accounts', async () => {
     getUserLoans
       .mockRejectedValueOnce(
         new ApiError({
@@ -260,6 +260,29 @@ describe('MyLoansPage', () => {
     await user.click(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByText('Clean Code')).toBeInTheDocument();
     expect(getUserLoans).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows a friendly empty state for ADMIN accounts without a linked member record', async () => {
+    getCurrentRole.mockReturnValue('ADMIN');
+    getCurrentEmail.mockReturnValue('admin@library.com');
+    getUserLoans.mockRejectedValueOnce(
+      new ApiError({
+        timestamp: '2026-08-16T00:00:00Z',
+        status: 404,
+        error: 'Not Found',
+        message: 'Member not found for authenticated user',
+        fieldErrors: null,
+      }),
+    );
+    renderMyLoansPage();
+
+    expect(
+      await screen.findByText("As an admin, you don't have a personal loan history. Visit Loan Management to view all loans."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open Loan Management' })).toHaveAttribute('href', '/loans');
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(getUserLoans).toHaveBeenCalledTimes(1);
   });
 
   it('filters the currently loaded page by status without extra API calls', async () => {

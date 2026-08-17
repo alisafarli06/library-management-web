@@ -74,7 +74,7 @@ export function BookTable({
                 </th>
               );
             })}
-            <th>Author ID</th>
+            <th>Author</th>
             <th>Availability</th>
             <th>Materials</th>
             <th>Actions</th>
@@ -95,7 +95,7 @@ export function BookTable({
                     <td className="book-table__title">{book.title}</td>
                     <td className="book-table__meta">{book.isbn}</td>
                     <td className="book-table__meta">{book.publishedYear ?? '—'}</td>
-                    <td className="book-table__meta">{book.authorId}</td>
+                    <td className="book-table__meta">{book.authorName ?? '—'}</td>
                     <td>
                       <Badge tone={available ? 'success' : 'warning'}>
                         {available ? 'Available' : 'Currently borrowed'}
@@ -134,7 +134,7 @@ export function BookTable({
                           <>
                             <button
                               type="button"
-                              className="book-table__action"
+                              className="book-table__action book-table__action--edit"
                               disabled={book.id == null}
                               aria-label="Edit"
                               title="Edit"

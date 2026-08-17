@@ -78,7 +78,8 @@
 
 .app-sidebar__icon {
   flex: 0 0 17px;
-  opacity: 0.85;
+  opacity: 0.92;
+  color: inherit;
 }
 
 .app-sidebar__link:hover {
@@ -97,24 +98,24 @@
 }
 
 .app-sidebar__link.is-active {
-  background: var(--color-primary-soft);
-  border-left-color: var(--color-primary);
-  color: var(--color-primary);
+  background: rgba(111, 148, 136, 0.32);
+  border-left-color: #a8c9bc;
+  color: #f7f3ec;
   font-weight: var(--font-weight-semibold);
 }
 
 .app-sidebar__link.is-active .app-sidebar__icon {
   opacity: 1;
-  color: var(--color-primary);
+  color: #f7f3ec;
 }
 
 .app-sidebar__link.is-active:hover {
-  color: var(--color-primary);
-  background: var(--color-primary-soft);
+  color: #ffffff;
+  background: rgba(111, 148, 136, 0.4);
 }
 
 .app-sidebar__link.is-active:hover .app-sidebar__icon {
-  color: var(--color-primary);
+  color: #ffffff;
 }
 
 .app-frame__main {

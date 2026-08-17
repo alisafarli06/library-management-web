@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { getUserLoans, returnOwnBook } from '../api/user';
+import { ApiError } from '../api/http';
+import { getCurrentRole } from '../auth/session';
 import { errorMessage } from '../components/auth/formErrors';
 import { LoanConfirmDialog } from '../components/loans/LoanConfirmDialog';
 import { LoanPagination } from '../components/loans/LoanPagination';
@@ -25,11 +27,22 @@ const STATUS_OPTIONS: { id: LoanStatusFilter; label: string }[] = [
   { id: 'returned', label: 'Returned' },
 ];
 
+function isAdminWithoutLinkedMember(error: unknown, role: ReturnType<typeof getCurrentRole>): boolean {
+  return (
+    role === 'ADMIN' &&
+    error instanceof ApiError &&
+    error.status === 404 &&
+    error.message.includes('Member not found for authenticated user')
+  );
+}
+
 export function MyLoansPage() {
+  const role = getCurrentRole();
   const [searchParams, setSearchParams] = useSearchParams();
   const appliedQuery = useMemo(() => parseLoanListQuery(searchParams), [searchParams]);
   const [result, setResult] = useState<Page<LoanDto> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadFailure, setLoadFailure] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
   const [statusFilter, setStatusFilter] = useState<LoanStatusFilter>('all');
@@ -46,6 +59,7 @@ export function MyLoansPage() {
     async function loadLoans() {
       setLoading(true);
       setError(null);
+      setLoadFailure(null);
       try {
         const page = await getUserLoans(toLoanPageApiQuery(appliedQuery));
         if (!cancelled) {
@@ -54,6 +68,7 @@ export function MyLoansPage() {
       } catch (loadError) {
         if (!cancelled) {
           setResult(null);
+          setLoadFailure(loadError);
           setError(errorMessage(loadError, 'Unable to load loans.'));
         }
       } finally {
@@ -126,6 +141,8 @@ export function MyLoansPage() {
   const hasLoadedEmptyHistory = !error && !loading && Boolean(result) && loans.length === 0;
   const hasFilteredEmpty = !error && !loading && loans.length > 0 && visibleLoans.length === 0;
   const returningLoanId = returnSubmitting && loanToReturn ? loanToReturn.id : null;
+  const adminWithoutMember =
+    Boolean(error) && isAdminWithoutLinkedMember(loadFailure, role);
 
   return (
     <div className="loan-page">
@@ -145,7 +162,7 @@ export function MyLoansPage() {
         </p>
       ) : null}
 
-      {error ? (
+      {error && !adminWithoutMember ? (
         <div>
           <p className="loan-alert" role="alert">
             {error}
@@ -158,11 +175,24 @@ export function MyLoansPage() {
         </div>
       ) : null}
 
-      {hasLoadedEmptyHistory ? (
+      {adminWithoutMember ? (
+        <EmptyState
+          title="No personal loan history"
+          body="As an admin, you don't have a personal loan history. Visit Loan Management to view all loans."
+        />
+      ) : null}
+
+      {adminWithoutMember ? (
+        <div className="loan-form__actions">
+          <Button to="/loans">Open Loan Management</Button>
+        </div>
+      ) : null}
+
+      {hasLoadedEmptyHistory && !adminWithoutMember ? (
         <EmptyState title="No borrowing history yet." body="Books you borrow will appear here." />
       ) : null}
 
-      {!error && (loading || loans.length > 0) ? (
+      {!error && !adminWithoutMember && (loading || loans.length > 0) ? (
         <Card>
           <div className="loan-toolbar">
             <div className="loan-filters" role="group" aria-label="Filter loans on this page">

@@ -112,8 +112,8 @@ export function BookDetailsDialog({
         <h2 id="book-details-heading">{book.title}</h2>
         <dl className="book-details">
           <div>
-            <dt>Author ID</dt>
-            <dd>{book.authorId}</dd>
+            <dt>Author</dt>
+            <dd>{book.authorName ?? '—'}</dd>
           </div>
           <div>
             <dt>ISBN</dt>

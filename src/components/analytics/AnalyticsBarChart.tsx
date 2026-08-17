@@ -25,7 +25,12 @@ interface AxisTickProps {
 }
 
 const BAR_COLOR = '#3f5c54';
-const LABEL_MAX = 22;
+const LABEL_MAX = 28;
+
+function chartLabelWidth(rows: AnalyticsBarRow[]): number {
+  const longest = rows.reduce((max, row) => Math.max(max, row.name.length), 0);
+  return Math.min(220, Math.max(148, Math.ceil(longest * 6.5)));
+}
 
 function truncateLabel(value: string, max = LABEL_MAX): string {
   if (value.length <= max) {
@@ -59,6 +64,7 @@ function TruncatedAxisTick({ x = 0, y = 0, payload }: AxisTickProps) {
 
 export function AnalyticsBarChart({ rows, label = 'Borrows' }: AnalyticsBarChartProps) {
   const height = Math.max(160, rows.length * 48);
+  const yAxisWidth = chartLabelWidth(rows);
 
   return (
     <div className="analytics-chart" style={{ width: '100%', height }} role="img" aria-label={label}>
@@ -66,7 +72,7 @@ export function AnalyticsBarChart({ rows, label = 'Borrows' }: AnalyticsBarChart
         <BarChart
           data={rows}
           layout="vertical"
-          margin={{ top: 4, right: 16, left: 4, bottom: 4 }}
+          margin={{ top: 4, right: 16, left: 12, bottom: 4 }}
           barCategoryGap="28%"
         >
           <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--color-border)" />
@@ -80,7 +86,7 @@ export function AnalyticsBarChart({ rows, label = 'Borrows' }: AnalyticsBarChart
           <YAxis
             type="category"
             dataKey="name"
-            width={128}
+            width={yAxisWidth}
             tick={<TruncatedAxisTick />}
             axisLine={false}
             tickLine={false}

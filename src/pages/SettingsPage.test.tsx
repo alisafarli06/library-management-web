@@ -72,6 +72,8 @@ describe('SettingsPage', () => {
     expect(await screen.findByDisplayValue('Ali Safarli')).toBeInTheDocument();
     expect(screen.getByDisplayValue('user@library.com')).toBeInTheDocument();
     expect(screen.getByLabelText('Email')).toHaveAttribute('readonly');
+    expect(screen.getByLabelText('Email')).toBeDisabled();
+    expect(screen.getByText('Your email is used to sign in and cannot be changed here.')).toBeInTheDocument();
   });
 
   it('validates an empty name before saving', async () => {

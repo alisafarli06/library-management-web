@@ -46,7 +46,7 @@
 
   /* App chrome (sidebar stays intentionally dark in both themes) */
   --color-sidebar: #2a2724;
-  --color-sidebar-text: #d8d0c6;
+  --color-sidebar-text: #e8e2d8;
   --color-sidebar-hover: rgba(247, 243, 236, 0.08);
 
   /* Brand panel (auth left column) — theme-independent */
@@ -155,8 +155,18 @@
   --color-danger-on: #1a1211;
   --color-overlay: rgba(8, 10, 9, 0.55);
 
+  /* Books table action pills — tuned for dark card backgrounds */
+  --color-book-action-neutral-bg: rgba(255, 255, 255, 0.14);
+  --color-book-action-neutral-text: #d4ddd8;
+  --color-book-action-neutral-disabled-bg: rgba(255, 255, 255, 0.1);
+  --color-book-action-neutral-disabled-text: #adb8b2;
+  --color-book-action-edit-bg: rgba(127, 186, 147, 0.28);
+  --color-book-action-edit-text: #c8ebd4;
+  --color-book-action-danger-bg: rgba(143, 61, 56, 0.44);
+  --color-book-action-danger-text: #f0c8c4;
+
   --color-sidebar: #141816;
-  --color-sidebar-text: #d8d0c6;
+  --color-sidebar-text: #e8e2d8;
   --color-sidebar-hover: rgba(247, 243, 236, 0.08);
 
   /* Brand panel tokens stay readable on the dark marketing panel */

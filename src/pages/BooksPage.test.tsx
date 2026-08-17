@@ -86,6 +86,7 @@ const availableBook: BookDto = {
   isbn: '9780132350884',
   publishedYear: 2008,
   authorId: 1,
+  authorName: 'Robert C. Martin',
   available: true,
 };
 
@@ -95,6 +96,7 @@ const unavailableBook: BookDto = {
   isbn: '9780134685991',
   publishedYear: 2018,
   authorId: 1,
+  authorName: 'Robert C. Martin',
   available: false,
 };
 
