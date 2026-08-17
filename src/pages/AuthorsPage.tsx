@@ -1,27 +1,37 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { createAuthor, deleteAuthor, searchAuthors, updateAuthor } from '../api/authors';
 import { getCurrentRole } from '../auth/session';
 import { errorMessage } from '../components/auth/formErrors';
 import { AuthorForm } from '../components/authors/AuthorForm';
 import { AuthorPagination } from '../components/authors/AuthorPagination';
 import { AuthorTable } from '../components/authors/AuthorTable';
+import { booksPathForAuthor } from '../components/authors/authorBooksNav';
 import {
   authorListQueryToSearchParams,
-  authorQueryHasSearch,
+  authorQueryHasActiveFilters,
   nextAuthorSort,
   parseAuthorListQuery,
   toAuthorApiQuery,
+  type AuthorBooksFilter,
   type AuthorListQuery,
 } from '../components/authors/authorListQuery';
 import { BookConfirmDialog } from '../components/books/BookConfirmDialog';
 import '../components/books/books.css';
+import '../components/loans/loans.css';
 import { Button, Card, EmptyState, PageHeader } from '../components/ui/Primitives';
 import type { AuthorDto, Page } from '../types/api';
 
 const SEARCH_DEBOUNCE_MS = 350;
 
+const BOOKS_FILTER_OPTIONS: { id: AuthorBooksFilter; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'with-books', label: 'With Books' },
+  { id: 'no-books', label: 'No Books' },
+];
+
 export function AuthorsPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const appliedQuery = useMemo(() => parseAuthorListQuery(searchParams), [searchParams]);
   const [result, setResult] = useState<Page<AuthorDto> | null>(null);
@@ -145,10 +155,10 @@ export function AuthorsPage() {
   const totalPages = result?.totalPages ?? 0;
   const totalElements = result?.totalElements ?? 0;
   const currentPage = result?.number ?? appliedQuery.page;
-  const hasSearch = authorQueryHasSearch(appliedQuery);
-  const hasLoadedEmptyCatalogue = !loading && !error && authors.length === 0 && !hasSearch && result != null;
-  const hasFilteredEmpty = !loading && !error && authors.length === 0 && hasSearch;
-  const showResultsCard = !error && (loading || authors.length > 0 || hasSearch);
+  const hasActiveFilters = authorQueryHasActiveFilters(appliedQuery);
+  const hasLoadedEmptyCatalogue = !loading && !error && authors.length === 0 && !hasActiveFilters && result != null;
+  const hasFilteredEmpty = !loading && !error && authors.length === 0 && hasActiveFilters;
+  const showResultsCard = !error && (loading || authors.length > 0 || hasActiveFilters);
 
   return (
     <div className="book-page">
@@ -193,11 +203,30 @@ export function AuthorsPage() {
 
       {showResultsCard ? (
         <Card>
-          <div className="book-toolbar">
-            <label className="book-search">
-              <span className="book-search__label">
+          <div className="loan-toolbar">
+            <div className="loan-filters" role="group" aria-label="Filter authors by books">
+              {BOOKS_FILTER_OPTIONS.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={appliedQuery.books === option.id ? 'loan-filter is-active' : 'loan-filter'}
+                  aria-pressed={appliedQuery.books === option.id}
+                  onClick={() =>
+                    replaceQuery({
+                      ...appliedQuery,
+                      page: 0,
+                      books: option.id,
+                    })
+                  }
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <label className="loan-search">
+              <span className="loan-search__label">
                 Search
-                {loading ? <span className="book-search__spinner" aria-hidden="true" /> : null}
+                {loading ? <span className="loan-search__spinner" aria-hidden="true" /> : null}
               </span>
               <input
                 type="search"
@@ -210,7 +239,7 @@ export function AuthorsPage() {
             </label>
           </div>
           {hasFilteredEmpty ? (
-            <EmptyState title="No authors match your search." body="Try a different author name." />
+            <EmptyState title="No authors match your filters." body="Try a different filter or search term." />
           ) : (
             <div className={loading ? 'book-table-loading' : undefined}>
               <AuthorTable
@@ -220,6 +249,7 @@ export function AuthorsPage() {
                 loading={loading}
                 canManage={canManageAuthors}
                 onSort={(field) => replaceQuery(nextAuthorSort(appliedQuery, field))}
+                onViewBooks={(author) => navigate(booksPathForAuthor(author))}
                 onEdit={(author) => {
                   if (!canManageAuthors || author.id == null) {
                     return;

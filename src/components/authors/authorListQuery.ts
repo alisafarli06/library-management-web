@@ -2,12 +2,15 @@ export type SortDirection = 'asc' | 'desc';
 
 export type AuthorSortField = 'id' | 'name' | 'bookCount';
 
+export type AuthorBooksFilter = 'all' | 'with-books' | 'no-books';
+
 export interface AuthorListQuery {
   page: number;
   size: number;
   sortField: AuthorSortField;
   sortDirection: SortDirection;
   q: string;
+  books: AuthorBooksFilter;
 }
 
 export const DEFAULT_AUTHOR_LIST_QUERY: AuthorListQuery = {
@@ -16,9 +19,17 @@ export const DEFAULT_AUTHOR_LIST_QUERY: AuthorListQuery = {
   sortField: 'name',
   sortDirection: 'asc',
   q: '',
+  books: 'all',
 };
 
 const SORT_FIELDS: AuthorSortField[] = ['id', 'name', 'bookCount'];
+const BOOKS_FILTERS: AuthorBooksFilter[] = ['all', 'with-books', 'no-books'];
+
+function parseBooksFilter(value: string | null): AuthorBooksFilter {
+  return BOOKS_FILTERS.includes(value as AuthorBooksFilter)
+    ? (value as AuthorBooksFilter)
+    : DEFAULT_AUTHOR_LIST_QUERY.books;
+}
 
 function parseSortField(value: string | undefined): AuthorSortField {
   return SORT_FIELDS.includes(value as AuthorSortField)
@@ -40,6 +51,7 @@ export function parseAuthorListQuery(params: URLSearchParams): AuthorListQuery {
     sortField: parseSortField(fieldRaw),
     sortDirection: directionRaw === 'desc' ? 'desc' : 'asc',
     q,
+    books: parseBooksFilter(params.get('books')),
   };
 }
 
@@ -55,6 +67,9 @@ export function authorListQueryToSearchParams(query: AuthorListQuery): URLSearch
   if (query.q) {
     params.set('q', query.q);
   }
+  if (query.books !== 'all') {
+    params.set('books', query.books);
+  }
   return params;
 }
 
@@ -63,12 +78,18 @@ export function toAuthorApiQuery(query: AuthorListQuery): {
   size: number;
   sort: string;
   q?: string;
+  hasBooks?: boolean;
 } {
   return {
     page: query.page,
     size: query.size,
     sort: `${query.sortField},${query.sortDirection}`,
     ...(query.q ? { q: query.q } : {}),
+    ...(query.books === 'with-books'
+      ? { hasBooks: true }
+      : query.books === 'no-books'
+        ? { hasBooks: false }
+        : {}),
   };
 }
 
@@ -90,4 +111,8 @@ export function nextAuthorSort(current: AuthorListQuery, field: AuthorSortField)
 
 export function authorQueryHasSearch(query: AuthorListQuery): boolean {
   return query.q.length > 0;
+}
+
+export function authorQueryHasActiveFilters(query: AuthorListQuery): boolean {
+  return query.q.length > 0 || query.books !== 'all';
 }

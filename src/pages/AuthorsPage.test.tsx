@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../api/http';
 import type { AuthorDto, Page } from '../types/api';
@@ -54,7 +54,10 @@ function pageOf(content: AuthorDto[], overrides: Partial<Page<AuthorDto>> = {}):
 function renderAuthorsPage(path = '/authors') {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <AuthorsPage />
+      <Routes>
+        <Route path="/authors" element={<AuthorsPage />} />
+        <Route path="/books" element={<div data-testid="books-page">Books</div>} />
+      </Routes>
     </MemoryRouter>,
   );
 }
@@ -99,6 +102,38 @@ describe('AuthorsPage', () => {
     expect(within(rows[2]).getByText('0')).toBeInTheDocument();
   });
 
+  it('navigates to Books filtered by author when a row is clicked', async () => {
+    getCurrentRole.mockReturnValue('USER');
+    const user = userEvent.setup();
+    renderAuthorsPage();
+
+    const austenRow = (await screen.findByText('Jane Austen')).closest('tr') as HTMLElement;
+    await user.click(austenRow);
+
+    expect(await screen.findByTestId('books-page')).toBeInTheDocument();
+  });
+
+  it('navigates to Books for authors with zero linked books', async () => {
+    getCurrentRole.mockReturnValue('USER');
+    const user = userEvent.setup();
+    renderAuthorsPage();
+
+    const tolstoyRow = (await screen.findByText('Leo Tolstoy')).closest('tr') as HTMLElement;
+    await user.click(tolstoyRow);
+
+    expect(await screen.findByTestId('books-page')).toBeInTheDocument();
+  });
+
+  it('does not navigate when admin action buttons are clicked', async () => {
+    getCurrentRole.mockReturnValue('ADMIN');
+    const user = userEvent.setup();
+    renderAuthorsPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Edit Jane Austen' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.queryByTestId('books-page')).not.toBeInTheDocument();
+  });
+
   it('paginates with a server-side request', async () => {
     getCurrentRole.mockReturnValue('USER');
     searchAuthors.mockResolvedValue(
@@ -134,7 +169,7 @@ describe('AuthorsPage', () => {
     renderAuthorsPage();
 
     await screen.findByText('Jane Austen');
-    await user.click(screen.getByRole('button', { name: /Books/ }));
+    await user.click(screen.getByRole('button', { name: 'Books', exact: true }));
 
     await waitFor(() => {
       expect(searchAuthors).toHaveBeenLastCalledWith({ page: 0, size: 20, sort: 'bookCount,asc' });
@@ -158,6 +193,38 @@ describe('AuthorsPage', () => {
     expect(screen.getByText(/Page 1 of 2/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
+  });
+
+  it('filters authors by book count through the API', async () => {
+    getCurrentRole.mockReturnValue('USER');
+    searchAuthors
+      .mockResolvedValueOnce(pageOf([austen, tolstoy]))
+      .mockResolvedValueOnce(pageOf([austen]));
+    const user = userEvent.setup();
+    renderAuthorsPage();
+
+    await screen.findByText('Jane Austen');
+    await user.click(screen.getByRole('button', { name: 'With Books' }));
+
+    await waitFor(() => {
+      expect(searchAuthors).toHaveBeenLastCalledWith({
+        page: 0,
+        size: 20,
+        sort: 'name,asc',
+        hasBooks: true,
+      });
+    });
+
+    await user.click(screen.getByRole('button', { name: 'No Books' }));
+
+    await waitFor(() => {
+      expect(searchAuthors).toHaveBeenLastCalledWith({
+        page: 0,
+        size: 20,
+        sort: 'name,asc',
+        hasBooks: false,
+      });
+    });
   });
 
   it('searches authors by name with debounce', async () => {

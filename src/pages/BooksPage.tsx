@@ -30,7 +30,9 @@ import { BookPagination } from '../components/books/BookPagination';
 import { BookTable } from '../components/books/BookTable';
 import {
   DEFAULT_BOOK_LIST_QUERY,
+  authorFilterLabel,
   bookListQueryToSearchParams,
+  clearAuthorFilter,
   hasActiveFilters,
   parseBookListQuery,
   parseOptionalYear,
@@ -44,13 +46,15 @@ import type { BookDto, BookSearchQuery, Page } from '../types/api';
 function toApiQuery(query: BookListQuery): BookSearchQuery {
   const available =
     query.available === 'true' ? true : query.available === 'false' ? false : undefined;
+  const authorId = query.authorId ? Number.parseInt(query.authorId, 10) : undefined;
 
   return {
     page: query.page,
     size: query.size,
     sort: `${query.sortField},${query.sortDirection}`,
     title: query.title || undefined,
-    author: query.author || undefined,
+    authorId: Number.isInteger(authorId) ? authorId : undefined,
+    author: !query.authorId && query.author ? query.author : undefined,
     yearFrom: parseOptionalYear(query.yearFrom),
     yearTo: parseOptionalYear(query.yearTo),
     available,
@@ -125,7 +129,12 @@ export function BooksPage() {
   }
 
   function applyFilters() {
-    replaceQuery({ ...draftQuery, page: 0 });
+    const next = { ...draftQuery, page: 0 };
+    if (next.authorId && next.author.trim() !== next.authorName.trim()) {
+      next.authorId = '';
+      next.authorName = '';
+    }
+    replaceQuery(next);
   }
 
   function clearFilters() {
@@ -134,6 +143,10 @@ export function BooksPage() {
       sortField: appliedQuery.sortField,
       sortDirection: appliedQuery.sortDirection,
     });
+  }
+
+  function dismissAuthorFilter() {
+    replaceQuery(clearAuthorFilter(appliedQuery));
   }
 
   function changeSort(field: BookSortField) {
@@ -246,6 +259,7 @@ export function BooksPage() {
   const totalPages = result?.totalPages ?? 0;
   const totalElements = result?.totalElements ?? 0;
   const currentPage = result?.number ?? appliedQuery.page;
+  const activeAuthorFilter = authorFilterLabel(appliedQuery);
 
   return (
     <div className="book-page">
@@ -275,6 +289,21 @@ export function BooksPage() {
       ) : null}
 
       <Card>
+        {activeAuthorFilter ? (
+          <div className="book-filter-chips" role="status" aria-live="polite">
+            <span className="book-filter-chip">
+              Author: {activeAuthorFilter}
+              <button
+                type="button"
+                className="book-filter-chip__clear"
+                aria-label={`Clear author filter for ${activeAuthorFilter}`}
+                onClick={dismissAuthorFilter}
+              >
+                ×
+              </button>
+            </span>
+          </div>
+        ) : null}
         <BookFilters
           value={draftQuery}
           disabled={loading}

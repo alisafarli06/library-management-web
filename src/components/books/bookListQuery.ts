@@ -11,6 +11,8 @@ export interface BookListQuery {
   sortDirection: SortDirection;
   title: string;
   author: string;
+  authorId: string;
+  authorName: string;
   yearFrom: string;
   yearTo: string;
   available: AvailableFilter;
@@ -23,6 +25,8 @@ export const DEFAULT_BOOK_LIST_QUERY: BookListQuery = {
   sortDirection: 'asc',
   title: '',
   author: '',
+  authorId: '',
+  authorName: '',
   yearFrom: '',
   yearTo: '',
   available: '',
@@ -39,13 +43,19 @@ export function parseBookListQuery(params: URLSearchParams): BookListQuery {
   const [fieldRaw, directionRaw] = sort.split(',');
   const availableRaw = params.get('available');
 
+  const authorId = params.get('authorId') ?? '';
+  const authorName = params.get('authorName') ?? '';
+  const authorParam = params.get('author');
+
   return {
     page: Number.isInteger(page) && page >= 0 ? page : 0,
     size: Number.isInteger(size) && size > 0 ? size : 20,
     sortField: isBookSortField(fieldRaw) ? fieldRaw : 'title',
     sortDirection: directionRaw === 'desc' ? 'desc' : 'asc',
     title: params.get('title') ?? '',
-    author: params.get('author') ?? '',
+    author: authorParam ?? (authorId && authorName ? authorName : ''),
+    authorId,
+    authorName,
     yearFrom: params.get('yearFrom') ?? '',
     yearTo: params.get('yearTo') ?? '',
     available: availableRaw === 'true' || availableRaw === 'false' ? availableRaw : '',
@@ -67,6 +77,12 @@ export function bookListQueryToSearchParams(query: BookListQuery): URLSearchPara
   if (query.author) {
     params.set('author', query.author);
   }
+  if (query.authorId) {
+    params.set('authorId', query.authorId);
+  }
+  if (query.authorName) {
+    params.set('authorName', query.authorName);
+  }
   if (query.yearFrom) {
     params.set('yearFrom', query.yearFrom);
   }
@@ -83,10 +99,29 @@ export function hasActiveFilters(query: BookListQuery): boolean {
   return (
     query.title.length > 0 ||
     query.author.length > 0 ||
+    query.authorId.length > 0 ||
     query.yearFrom.length > 0 ||
     query.yearTo.length > 0 ||
     query.available !== ''
   );
+}
+
+export function authorFilterLabel(query: BookListQuery): string | null {
+  if (query.authorId) {
+    return query.authorName.trim() || `Author #${query.authorId}`;
+  }
+  const author = query.author.trim();
+  return author.length > 0 ? author : null;
+}
+
+export function clearAuthorFilter(query: BookListQuery): BookListQuery {
+  return {
+    ...query,
+    page: 0,
+    author: '',
+    authorId: '',
+    authorName: '',
+  };
 }
 
 export function parseOptionalYear(value: string): number | undefined {

@@ -159,6 +159,7 @@ export interface PageQuery {
 export interface BookSearchQuery extends PageQuery {
   title?: string;
   author?: string;
+  authorId?: number;
   publishedAfter?: number;
   yearFrom?: number;
   yearTo?: number;

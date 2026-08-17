@@ -135,9 +135,9 @@ function pageOf(content: BookDto[]): Page<BookDto> {
   };
 }
 
-function renderBooksPage() {
+function renderBooksPage(path = '/books') {
   return render(
-    <MemoryRouter initialEntries={['/books']}>
+    <MemoryRouter initialEntries={[path]}>
       <BooksPage />
     </MemoryRouter>,
   );
@@ -493,5 +493,32 @@ describe('BooksPage borrow flow', () => {
     expect(await within(dialog).findByText('Cover must be a JPEG or PNG image.')).toBeInTheDocument();
     expect(createBook).not.toHaveBeenCalled();
     expect(attachBookCover).not.toHaveBeenCalled();
+  });
+
+  it('loads with an authorId URL filter, shows a chip, and clears it', async () => {
+    getCurrentRole.mockReturnValue('USER');
+    searchBooks.mockResolvedValue(pageOf([]));
+    const user = userEvent.setup();
+    renderBooksPage('/books?authorId=1&authorName=Jane%20Austen&author=Jane%20Austen&sort=title,asc');
+
+    await waitFor(() => {
+      expect(searchBooks).toHaveBeenCalledWith(
+        expect.objectContaining({
+          authorId: 1,
+          page: 0,
+          size: 20,
+          sort: 'title,asc',
+        }),
+      );
+    });
+    expect(screen.getByDisplayValue('Jane Austen')).toBeInTheDocument();
+    expect(screen.getByText(/Author: Jane Austen/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Clear author filter for Jane Austen/i }));
+
+    await waitFor(() => {
+      expect(listBooks).toHaveBeenCalled();
+    });
+    expect(screen.queryByText(/Author: Jane Austen/)).not.toBeInTheDocument();
   });
 });

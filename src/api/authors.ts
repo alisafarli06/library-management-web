@@ -5,7 +5,9 @@ export function listAuthors(query: PageQuery = {}): Promise<Page<AuthorDto>> {
   return getJson<Page<AuthorDto>>('/authors', query);
 }
 
-export function searchAuthors(query: PageQuery & { q?: string } = {}): Promise<Page<AuthorDto>> {
+export function searchAuthors(
+  query: PageQuery & { q?: string; hasBooks?: boolean } = {},
+): Promise<Page<AuthorDto>> {
   return getJson<Page<AuthorDto>>('/authors/search', query);
 }
 

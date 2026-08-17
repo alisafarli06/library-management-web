@@ -1,4 +1,5 @@
-import { ArrowDown, ArrowUp, ChevronsUpDown, Pencil, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronRight, ChevronsUpDown, Pencil, Trash2 } from 'lucide-react';
+import type { KeyboardEvent, MouseEvent } from 'react';
 import type { AuthorDto } from '../../types/api';
 import type { AuthorSortField, SortDirection } from './authorListQuery';
 
@@ -9,6 +10,7 @@ interface AuthorTableProps {
   loading: boolean;
   canManage: boolean;
   onSort: (field: AuthorSortField) => void;
+  onViewBooks: (author: AuthorDto) => void;
   onEdit: (author: AuthorDto) => void;
   onDelete: (author: AuthorDto) => void;
 }
@@ -54,6 +56,10 @@ function SortHeader({
   );
 }
 
+function stopRowNavigation(event: MouseEvent | KeyboardEvent) {
+  event.stopPropagation();
+}
+
 export function AuthorTable({
   authors,
   sortField,
@@ -61,14 +67,15 @@ export function AuthorTable({
   loading,
   canManage,
   onSort,
+  onViewBooks,
   onEdit,
   onDelete,
 }: AuthorTableProps) {
-  const columnCount = canManage ? 4 : 3;
+  const columnCount = canManage ? 5 : 4;
 
   return (
     <div className="book-table-wrap">
-      <table className="book-table">
+      <table className="book-table author-table">
         <thead>
           <tr>
             <SortHeader
@@ -93,6 +100,9 @@ export function AuthorTable({
               onSort={onSort}
             />
             {canManage ? <th>Actions</th> : null}
+            <th className="author-table__chevron-col">
+              <span className="visually-hidden">View books</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -103,13 +113,25 @@ export function AuthorTable({
                 </tr>
               ))
             : authors.map((author) => (
-                <tr key={author.id ?? author.name}>
+                <tr
+                  key={author.id ?? author.name}
+                  className="author-table__row author-table__row--clickable"
+                  tabIndex={0}
+                  aria-label={`View books by ${author.name}`}
+                  onClick={() => onViewBooks(author)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      onViewBooks(author);
+                    }
+                  }}
+                >
                   <td>{author.id ?? '—'}</td>
                   <td>{author.name}</td>
                   <td>{author.bookCount ?? 0}</td>
                   {canManage ? (
                     <td>
-                      <div className="book-table__actions">
+                      <div className="book-table__actions" onClick={stopRowNavigation} onKeyDown={stopRowNavigation}>
                         <button
                           type="button"
                           className="book-table__action"
@@ -131,6 +153,9 @@ export function AuthorTable({
                       </div>
                     </td>
                   ) : null}
+                  <td className="author-table__chevron" aria-hidden="true">
+                    <ChevronRight size={16} strokeWidth={2} />
+                  </td>
                 </tr>
               ))}
         </tbody>
