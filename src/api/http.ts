@@ -1,4 +1,5 @@
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from '../auth/tokenStorage';
+import { handleSessionExpired, SESSION_EXPIRED_MESSAGE } from './sessionExpiry';
 import type { AuthenticationResponse, ErrorResponse } from '../types/api';
 
 const API_PREFIX = '/api';
@@ -72,21 +73,65 @@ function isErrorResponse(value: unknown): value is ErrorResponse {
     return false;
   }
   const body = value as Record<string, unknown>;
+  const fieldErrors = body.fieldErrors;
+  const fieldErrorsValid =
+    fieldErrors === undefined ||
+    fieldErrors === null ||
+    (typeof fieldErrors === 'object' && fieldErrors !== null && !Array.isArray(fieldErrors));
+
   return (
     typeof body.timestamp === 'string' &&
     typeof body.status === 'number' &&
     typeof body.error === 'string' &&
     typeof body.message === 'string' &&
-    (body.fieldErrors === null ||
-      (typeof body.fieldErrors === 'object' && body.fieldErrors !== null && !Array.isArray(body.fieldErrors)))
+    fieldErrorsValid
   );
+}
+
+function defaultMessageForStatus(status: number): string {
+  switch (status) {
+    case 401:
+      return SESSION_EXPIRED_MESSAGE;
+    case 403:
+      return 'You do not have permission to perform this action.';
+    case 404:
+      return 'The requested item could not be found.';
+    case 409:
+      return 'This action conflicts with existing data.';
+    default:
+      return `Request failed with status ${status}`;
+  }
+}
+
+function extractMessageFromRawBody(rawBody: string, status: number): string {
+  const trimmed = rawBody.trim();
+  if (!trimmed) {
+    return defaultMessageForStatus(status);
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+    if (typeof parsed.message === 'string' && parsed.message.trim().length > 0) {
+      return parsed.message.trim();
+    }
+  } catch {
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      return defaultMessageForStatus(status);
+    }
+    return trimmed;
+  }
+
+  return defaultMessageForStatus(status);
 }
 
 function toApiError(status: number, rawBody: string): ApiError {
   try {
     const parsed: unknown = JSON.parse(rawBody);
     if (isErrorResponse(parsed)) {
-      return new ApiError(parsed);
+      return new ApiError({
+        ...parsed,
+        fieldErrors: parsed.fieldErrors ?? null,
+      });
     }
   } catch {
     // Body was not JSON; fall through with status and raw text.
@@ -96,9 +141,34 @@ function toApiError(status: number, rawBody: string): ApiError {
     timestamp: new Date().toISOString(),
     status,
     error: 'Error',
-    message: rawBody || `Request failed with status ${status}`,
+    message: extractMessageFromRawBody(rawBody, status),
     fieldErrors: null,
   });
+}
+
+function shouldAttemptRefresh(status: number, apiError: ApiError, options: RequestOptions, isRetry: boolean): boolean {
+  return (
+    !options.skipRefresh &&
+    !isRetry &&
+    options.path !== REFRESH_PATH &&
+    status === 401 &&
+    apiError.message === 'Token expired' &&
+    Boolean(getRefreshToken())
+  );
+}
+
+function rejectUnauthorized(apiError: ApiError, skipAuth?: boolean): never {
+  if (!skipAuth && apiError.status === 401) {
+    handleSessionExpired(SESSION_EXPIRED_MESSAGE);
+    throw new ApiError({
+      timestamp: apiError.timestamp,
+      status: apiError.status,
+      error: apiError.error,
+      message: SESSION_EXPIRED_MESSAGE,
+      fieldErrors: apiError.fieldErrors,
+    });
+  }
+  throw apiError;
 }
 
 type ParseAs = 'json' | 'text' | 'blob' | 'void';
@@ -221,28 +291,28 @@ async function request<T>(options: RequestOptions, isRetry = false): Promise<T> 
   if (!response.ok) {
     const rawBody = await response.text();
     const apiError = toApiError(response.status, rawBody);
-    const canRefresh =
-      !options.skipRefresh &&
-      !isRetry &&
-      options.path !== REFRESH_PATH &&
-      response.status === 401 &&
-      apiError.message === 'Token expired' &&
-      Boolean(getRefreshToken());
 
-    if (canRefresh) {
+    if (shouldAttemptRefresh(response.status, apiError, options, isRetry)) {
       try {
         await refreshOnce();
         return request<T>(options, true);
       } catch (refreshError) {
         clearTokens();
-        throw refreshError instanceof ApiError ? refreshError : apiError;
+        if (refreshError instanceof ApiError) {
+          rejectUnauthorized(refreshError, options.skipAuth);
+        }
+        rejectUnauthorized(apiError, options.skipAuth);
       }
     }
 
-    throw apiError;
+    rejectUnauthorized(apiError, options.skipAuth);
   }
 
   return (await parseBody(response, options.parse)) as T;
+}
+
+export function createApiErrorFromResponse(status: number, rawBody: string): ApiError {
+  return toApiError(status, rawBody);
 }
 
 export function getJson<T>(path: string, query?: object): Promise<T> {

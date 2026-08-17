@@ -169,7 +169,7 @@ describe('AuthorsPage', () => {
     renderAuthorsPage();
 
     await screen.findByText('Jane Austen');
-    await user.click(screen.getByRole('button', { name: 'Books', exact: true }));
+    await user.click(screen.getByRole('button', { name: /^Books$/ }));
 
     await waitFor(() => {
       expect(searchAuthors).toHaveBeenLastCalledWith({ page: 0, size: 20, sort: 'bookCount,asc' });

@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { SessionExpiryListener } from './components/auth/SessionExpiryListener';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -19,7 +20,9 @@ function FallbackRedirect() {
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      <SessionExpiryListener />
+      <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route element={<GuestOnly />}>
         <Route path="/login" element={<LoginPage />} />
@@ -41,6 +44,7 @@ export default function App() {
         </Route>
       </Route>
       <Route path="*" element={<FallbackRedirect />} />
-    </Routes>
+      </Routes>
+    </>
   );
 }

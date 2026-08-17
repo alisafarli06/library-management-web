@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { login } from '../api/auth';
+import { resetSessionExpiryHandling } from '../api/sessionExpiry';
+import { consumeAuthNotice } from '../auth/authNotice';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { PasswordField } from '../components/auth/PasswordField';
 import { TextField } from '../components/auth/TextField';
@@ -13,6 +15,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [authNotice] = useState<string | null>(() => consumeAuthNotice());
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -42,6 +45,7 @@ export function LoginPage() {
 
     try {
       await login({ email: trimmedEmail, password });
+      resetSessionExpiryHandling();
       navigate('/dashboard', { replace: true });
     } catch (error) {
       const backendFields = fieldErrorsFrom(error);
@@ -67,6 +71,11 @@ export function LoginPage() {
       }
     >
       <form className="auth-form" onSubmit={handleSubmit} noValidate aria-busy={submitting}>
+        {authNotice ? (
+          <p className="form-alert" role="status">
+            {authNotice}
+          </p>
+        ) : null}
         {formError ? (
           <p className="form-alert" role="alert">
             {formError}
