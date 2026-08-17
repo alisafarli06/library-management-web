@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#1f1c1a"/>
+  <defs>
+    <radialGradient id="g" cx="22%" cy="18%" r="70%">
+      <stop offset="0%" stop-color="#3f5c54" stop-opacity="0.42"/>
+      <stop offset="100%" stop-color="#1f1c1a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#g)"/>
+  <g transform="translate(56 72) scale(5.55)" fill="#f4efe6" stroke="#f4efe6">
+    <path fill="none" stroke-width="1.9" d="M8 12h56v44H8z"/>
+    <path fill="none" stroke-width="1.9" d="M8 33h56"/>
+    <path fill="#f4efe6" stroke="none" d="M14 16h6v14h-6z"/>
+    <path fill="#f4efe6" fill-opacity="0.78" stroke="none" d="M22 19h5v11h-5z"/>
+    <path fill="#f4efe6" fill-opacity="0.92" stroke="none" d="M29 16h7v14h-7z"/>
+    <path fill="#f4efe6" fill-opacity="0.7" stroke="none" d="M38 18h4v12h-4z"/>
+    <path fill="#f4efe6" fill-opacity="0.88" stroke="none" d="M44 16h8v14h-8z"/>
+    <path fill="#f4efe6" fill-opacity="0.82" stroke="none" d="M14 37h8v16h-8z"/>
+    <path fill="#f4efe6" fill-opacity="0.95" stroke="none" d="M24 40h5v13h-5z"/>
+    <path fill="#f4efe6" fill-opacity="0.74" stroke="none" d="M31 37h7v16h-7z"/>
+    <path fill="#f4efe6" fill-opacity="0.9" stroke="none" d="M40 39h6v14h-6z"/>
+    <path fill="#f4efe6" fill-opacity="0.72" stroke="none" d="M48 37h8v16h-8z"/>
+  </g>
+</svg>
