@@ -2,7 +2,15 @@ import { clearTokens, getAccessToken, getRefreshToken, setTokens } from '../auth
 import { handleSessionExpired, SESSION_EXPIRED_MESSAGE } from './sessionExpiry';
 import type { AuthenticationResponse, ErrorResponse } from '../types/api';
 
-const API_PREFIX = '/api';
+function resolveApiPrefix(): string {
+  const origin = import.meta.env.VITE_API_ORIGIN?.trim().replace(/\/+$/, '');
+  if (!origin || import.meta.env.DEV || /localhost|127\.0\.0\.1/i.test(origin)) {
+    return '/api';
+  }
+  return `${origin}/api`;
+}
+
+const API_PREFIX = resolveApiPrefix();
 const REFRESH_PATH = '/auth/refresh';
 
 export type QueryPrimitive = string | number | boolean;
