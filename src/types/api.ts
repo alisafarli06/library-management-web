@@ -54,6 +54,18 @@ export interface UserProfileDto {
   email: string;
 }
 
+export interface AdminUserDto {
+  id: number;
+  fullName: string;
+  email: string;
+  role: Role;
+  createdAt: string;
+}
+
+export interface UpdateUserRoleRequest {
+  role: Role;
+}
+
 export interface UpdateProfileRequest {
   name: string;
 }

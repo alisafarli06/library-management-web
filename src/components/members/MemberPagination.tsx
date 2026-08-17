@@ -7,6 +7,7 @@ interface MemberPaginationProps {
   disabled: boolean;
   onPrevious: () => void;
   onNext: () => void;
+  itemLabel?: string;
 }
 
 export function MemberPagination({
@@ -16,6 +17,7 @@ export function MemberPagination({
   disabled,
   onPrevious,
   onNext,
+  itemLabel = 'members',
 }: MemberPaginationProps) {
   const displayPage = totalPages === 0 ? 0 : page + 1;
   const isFirst = page <= 0;
@@ -24,7 +26,7 @@ export function MemberPagination({
   return (
     <div className="member-pagination">
       <p>
-        Page {displayPage} of {Math.max(totalPages, 0)} · {totalElements} members
+        Page {displayPage} of {Math.max(totalPages, 0)} · {totalElements} {itemLabel}
       </p>
       <div className="member-pagination__actions">
         <Button type="button" variant="secondary" disabled={disabled || isFirst} onClick={onPrevious}>
