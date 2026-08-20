@@ -1,5 +1,7 @@
 import type { AuthenticationResponse } from '../types/api';
 import type { Role } from '../types/enums';
+import { setAuthNotice } from './authNotice';
+import { clearLastActivity, INACTIVITY_MESSAGE, isInactivityExpired, recordActivity } from './inactivity';
 import { getTokenEmail, getTokenExpiration, getTokenRole, isTokenExpired } from './jwt';
 import {
   clearTokens,
@@ -43,6 +45,14 @@ export function hasValidAccessSession(): boolean {
   if (!hasClaims) {
     return false;
   }
+  // Inactivity is independent of JWT expiry; expired idle sessions cannot be
+  // revived by a still-valid refresh token after browser reopen.
+  if (isInactivityExpired()) {
+    clearTokens();
+    clearLastActivity();
+    setAuthNotice(INACTIVITY_MESSAGE);
+    return false;
+  }
   if (!isTokenExpired(token)) {
     return true;
   }
@@ -63,8 +73,10 @@ export function getAccessTokenExpiresAt(): Date | null {
 
 export function saveAuthentication(response: AuthenticationResponse): void {
   setTokens(response.accessToken, response.refreshToken);
+  recordActivity();
 }
 
 export function clearSession(): void {
   clearTokens();
+  clearLastActivity();
 }

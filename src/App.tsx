@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { InactivityTimeoutListener } from './components/auth/InactivityTimeoutListener';
 import { SessionExpiryListener } from './components/auth/SessionExpiryListener';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -22,6 +23,7 @@ export default function App() {
   return (
     <>
       <SessionExpiryListener />
+      <InactivityTimeoutListener />
       <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route element={<GuestOnly />}>
